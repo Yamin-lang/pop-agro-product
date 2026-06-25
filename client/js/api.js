@@ -1,11 +1,25 @@
 // ============================================
-// API.JS - SERVER BOG'LANISH (TUZATILGAN)
+// API.JS - SERVER BOG'LANISH (TO'LIQ TUZATILGAN)
 // ============================================
 
 // ============================================
-// 🔥 API BASE - DOIMIY /api BILAN
+// 🔥 API BASE - AVTOMATIK ANIQLASH
 // ============================================
-var API_BASE = window.location.origin + '/api';
+var API_BASE = (function() {
+    // Agar Vercel da bo'lsa
+    if (window.location.hostname.includes('vercel.app')) {
+        return window.location.origin + '/api';
+    }
+    // Agar localhost da bo'lsa
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:5000/api';
+    }
+    // Agar boshqa domain bo'lsa
+    return window.location.origin + '/api';
+})();
+
+// Global qilish
+window.API_BASE = API_BASE;
 
 console.log('✅ API loaded, base:', API_BASE);
 
@@ -260,6 +274,51 @@ var API = {
             });
     },
     
+    // ==================== DEBTORS ====================
+    getDebtors: function() {
+        console.log('📤 API.getDebtors called');
+        return fetch(API_BASE + '/debtors')
+            .then(function(r) {
+                console.log('📥 Response status:', r.status);
+                if (!r.ok) {
+                    throw new Error('HTTP ' + r.status);
+                }
+                return r.json();
+            })
+            .then(function(data) {
+                console.log('📥 Debtors count:', data.data ? data.data.length : 0);
+                return data;
+            })
+            .catch(function(err) {
+                console.error('❌ Get debtors error:', err);
+                return { success: false, message: err.message, data: [] };
+            });
+    },
+    
+    payDebt: function(id, amount) {
+        console.log('📤 API.payDebt called - ID:', id, 'Amount:', amount);
+        return fetch(API_BASE + '/debtors/' + id + '/pay', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: amount || 0 })
+        })
+        .then(function(r) {
+            console.log('📥 Response status:', r.status);
+            if (!r.ok) {
+                throw new Error('HTTP ' + r.status);
+            }
+            return r.json();
+        })
+        .then(function(data) {
+            console.log('📥 Pay debt response:', data);
+            return data;
+        })
+        .catch(function(err) {
+            console.error('❌ Pay debt error:', err);
+            return { success: false, message: err.message };
+        });
+    },
+    
     // ==================== REPORTS ====================
     getDailyReport: function(date) {
         var queryDate = date || new Date().toISOString().split('T')[0];
@@ -364,6 +423,139 @@ var API = {
             });
     },
     
+    // ==================== EMPLOYEES ====================
+    getEmployees: function() {
+        console.log('📤 API.getEmployees called');
+        return fetch(API_BASE + '/employees')
+            .then(function(r) {
+                console.log('📥 Response status:', r.status);
+                if (!r.ok) {
+                    throw new Error('HTTP ' + r.status);
+                }
+                return r.json();
+            })
+            .then(function(data) {
+                console.log('📥 Employees count:', data.data ? data.data.length : 0);
+                return data;
+            })
+            .catch(function(err) {
+                console.error('❌ Get employees error:', err);
+                return { success: false, message: err.message, data: [] };
+            });
+    },
+    
+    addEmployee: function(data) {
+        console.log('📤 API.addEmployee called with:', data);
+        return fetch(API_BASE + '/employees', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(function(r) {
+            console.log('📥 Response status:', r.status);
+            if (!r.ok) {
+                throw new Error('HTTP ' + r.status);
+            }
+            return r.json();
+        })
+        .then(function(data) {
+            console.log('📥 Add employee response:', data);
+            return data;
+        })
+        .catch(function(err) {
+            console.error('❌ Add employee error:', err);
+            return { success: false, message: err.message };
+        });
+    },
+    
+    deleteEmployee: function(id) {
+        console.log('📤 API.deleteEmployee called - ID:', id);
+        return fetch(API_BASE + '/employees/' + id, {
+            method: 'DELETE'
+        })
+        .then(function(r) {
+            console.log('📥 Response status:', r.status);
+            if (!r.ok) {
+                throw new Error('HTTP ' + r.status);
+            }
+            return r.json();
+        })
+        .then(function(data) {
+            console.log('📥 Delete employee response:', data);
+            return data;
+        })
+        .catch(function(err) {
+            console.error('❌ Delete employee error:', err);
+            return { success: false, message: err.message };
+        });
+    },
+    
+    // ==================== RETURNS (QAYTARISH) ====================
+    returnProduct: function(data) {
+        console.log('📤 API.returnProduct called with:', data);
+        return fetch(API_BASE + '/returns', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(function(r) {
+            console.log('📥 Response status:', r.status);
+            if (!r.ok) {
+                throw new Error('HTTP ' + r.status);
+            }
+            return r.json();
+        })
+        .then(function(data) {
+            console.log('📥 Return product response:', data);
+            return data;
+        })
+        .catch(function(err) {
+            console.error('❌ Return product error:', err);
+            return { success: false, message: err.message };
+        });
+    },
+    
+    getReturns: function(date) {
+        var queryDate = date || new Date().toISOString().split('T')[0];
+        console.log('📤 API.getReturns - date:', queryDate);
+        return fetch(API_BASE + '/returns?date=' + queryDate)
+            .then(function(r) {
+                console.log('📥 Response status:', r.status);
+                if (!r.ok) {
+                    throw new Error('HTTP ' + r.status);
+                }
+                return r.json();
+            })
+            .then(function(data) {
+                console.log('📥 Returns count:', data.data ? data.data.length : 0);
+                return data;
+            })
+            .catch(function(err) {
+                console.error('❌ Get returns error:', err);
+                return { success: false, message: err.message, data: [] };
+            });
+    },
+    
+    getAllReturns: function() {
+        console.log('📤 API.getAllReturns called');
+        return fetch(API_BASE + '/returns/all')
+            .then(function(r) {
+                console.log('📥 Response status:', r.status);
+                if (!r.ok) {
+                    throw new Error('HTTP ' + r.status);
+                }
+                return r.json();
+            })
+            .then(function(data) {
+                console.log('📥 All returns count:', data.data ? data.data.length : 0);
+                return data;
+            })
+            .catch(function(err) {
+                console.error('❌ Get all returns error:', err);
+                return { success: false, message: err.message, data: [] };
+            });
+    },
+    
     // ==================== GENERIC REQUEST ====================
     request: function(url, options) {
         options = options || {};
@@ -389,5 +581,10 @@ var API = {
         });
     }
 };
+
+// ============================================
+// API ni global qilish
+// ============================================
+window.API = API;
 
 console.log('✅ API ready - all functions loaded');

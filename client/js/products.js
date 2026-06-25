@@ -1,6 +1,22 @@
 // ============================================
-// PRODUCTS.JS - OMBOR (TO'LIQ)
+// PRODUCTS.JS - OMBOR (TO'LIQ TUZATILGAN)
 // ============================================
+
+// ============================================
+// API_BASE ni aniqlash (agar mavjud bo'lmasa)
+// ============================================
+if (typeof API_BASE === 'undefined') {
+    var API_BASE = (function() {
+        if (window.location.hostname.includes('vercel.app')) {
+            return window.location.origin + '/api';
+        }
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            return 'http://localhost:5000/api';
+        }
+        return window.location.origin + '/api';
+    })();
+    console.log('📦 API_BASE set to:', API_BASE);
+}
 
 var editingProductId = null;
 
@@ -156,7 +172,7 @@ function clearProductForm() {
 }
 
 // ============================================
-// SAVE PRODUCT (CREATE + UPDATE)
+// SAVE PRODUCT (CREATE + UPDATE) - TUZATILGAN
 // ============================================
 function saveProduct() {
     var nameInput = document.getElementById('pName');
@@ -203,20 +219,26 @@ function saveProduct() {
     }
 }
 
+// ============================================
+// SEND PRODUCT - TUZATILGAN (API_BASE bilan)
+// ============================================
 function sendProduct(data) {
     var method = editingProductId ? 'PUT' : 'POST';
     var url = editingProductId ? API_BASE + '/products/' + editingProductId : API_BASE + '/products';
     
-    console.log('📤 SEND PRODUCT - Method:', method, 'URL:', url, 'Data:', data);
+    console.log('📤 SEND PRODUCT - URL:', url, 'Method:', method, 'Data:', data);
     
     fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     })
-    .then(function(r) { 
-        console.log('📥 Response status:', r.status);
-        return r.json(); 
+    .then(function(response) {
+        console.log('📥 Response status:', response.status);
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status + ' - ' + response.statusText);
+        }
+        return response.json();
     })
     .then(function(result) {
         console.log('📥 Response data:', result);
@@ -224,6 +246,10 @@ function sendProduct(data) {
             showToast(editingProductId ? '✅ Mahsulot yangilandi!' : '✅ Mahsulot qo\'shildi!', 'success');
             hideAddProduct();
             loadProductsTable();
+            // POS dagi mahsulotlarni ham yangilash
+            if (typeof loadPOSProducts === 'function') {
+                loadPOSProducts();
+            }
         } else {
             showToast('❌ Xatolik: ' + (result.message || 'Noma\'lum xatolik'), 'error');
         }
@@ -238,127 +264,175 @@ function sendProduct(data) {
 // EDIT PRODUCT - TAHRIRLASH
 // ============================================
 function editProduct(id) {
-    console.log('✏️ EDIT PRODUCT - ID:', id);
+    console.log('✏️ Edit product - ID:', id);
     
-    API.getProducts().then(function(data) {
-        if (data.success && data.data) {
-            var product = data.data.find(function(p) { return p.id === id; });
-            if (!product) {
-                showToast('❌ Mahsulot topilmadi!', 'error');
-                return;
+    fetch(API_BASE + '/products')
+        .then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
+        .then(function(data) {
+            if (data.success && data.data) {
+                var product = data.data.find(function(p) { return p.id === id; });
+                if (!product) {
+                    showToast('❌ Mahsulot topilmadi!', 'error');
+                    return;
+                }
+                
+                editingProductId = id;
+                var titleEl = document.getElementById('productFormTitle');
+                if (titleEl) titleEl.textContent = '✏️ Mahsulotni tahrirlash';
+                
+                var formEl = document.getElementById('productForm');
+                if (formEl) formEl.style.display = 'block';
+                
+                // Ma'lumotlarni formaga yozish
+                var nameInput = document.getElementById('pName');
+                var codeInput = document.getElementById('pCode');
+                var costInput = document.getElementById('pCostPrice');
+                var sellInput = document.getElementById('pSellPrice');
+                var qtyInput = document.getElementById('pQuantity');
+                var unitInput = document.getElementById('pUnit');
+                
+                if (nameInput) nameInput.value = product.name || '';
+                if (codeInput) codeInput.value = product.code || '';
+                if (costInput) costInput.value = product.cost_price || 0;
+                if (sellInput) sellInput.value = product.price || 0;
+                if (qtyInput) qtyInput.value = product.quantity || 0;
+                if (unitInput) unitInput.value = product.unit || 'dona';
+                
+                calcMargin();
+                
+                var currentImage = document.getElementById('currentImage');
+                var currentImagePreview = document.getElementById('currentImagePreview');
+                
+                if (product.image && currentImagePreview) {
+                    currentImagePreview.src = product.image;
+                    if (currentImage) currentImage.style.display = 'block';
+                } else {
+                    if (currentImage) currentImage.style.display = 'none';
+                }
+                
+                var form = document.getElementById('productForm');
+                if (form) form.scrollIntoView({ behavior: 'smooth' });
+                
+                showToast('✏️ Tahrirlash rejimi: ' + product.name, 'info');
             }
-            
-            console.log('📦 Mahsulot topildi:', product);
-            
-            editingProductId = id;
-            var titleEl = document.getElementById('productFormTitle');
-            if (titleEl) titleEl.textContent = '✏️ Mahsulotni tahrirlash';
-            
-            var formEl = document.getElementById('productForm');
-            if (formEl) formEl.style.display = 'block';
-            
-            // Ma'lumotlarni formaga yozish
-            var nameInput = document.getElementById('pName');
-            var codeInput = document.getElementById('pCode');
-            var costInput = document.getElementById('pCostPrice');
-            var sellInput = document.getElementById('pSellPrice');
-            var qtyInput = document.getElementById('pQuantity');
-            var unitInput = document.getElementById('pUnit');
-            
-            if (nameInput) nameInput.value = product.name || '';
-            if (codeInput) codeInput.value = product.code || '';
-            if (costInput) costInput.value = product.cost_price || 0;
-            if (sellInput) sellInput.value = product.price || 0;
-            if (qtyInput) qtyInput.value = product.quantity || 0;
-            if (unitInput) unitInput.value = product.unit || 'dona';
-            
-            calcMargin();
-            
-            var currentImage = document.getElementById('currentImage');
-            var currentImagePreview = document.getElementById('currentImagePreview');
-            
-            if (product.image && currentImagePreview) {
-                currentImagePreview.src = product.image;
-                if (currentImage) currentImage.style.display = 'block';
-            } else {
-                if (currentImage) currentImage.style.display = 'none';
-            }
-            
-            var form = document.getElementById('productForm');
-            if (form) form.scrollIntoView({ behavior: 'smooth' });
-            
-            showToast('✏️ Tahrirlash rejimi: ' + product.name, 'info');
-        }
-    });
+        })
+        .catch(function(err) {
+            console.error('❌ Edit error:', err);
+            showToast('❌ Mahsulotni yuklashda xatolik: ' + err.message, 'error');
+        });
 }
 
 // ============================================
-// DELETE PRODUCT - TUZATILGAN
+// DELETE PRODUCT
 // ============================================
 function deleteProduct(id) {
     if (!confirm('Mahsulotni o\'chirishni xohlaysizmi?')) return;
     
-    console.log('🗑️ DELETE PRODUCT - ID:', id);
+    console.log('🗑️ Delete product - ID:', id);
     
-    API.deleteProduct(id).then(function(data) {
-        console.log('📥 Delete response:', data);
+    fetch(API_BASE + '/products/' + id, {
+        method: 'DELETE'
+    })
+    .then(function(r) {
+        console.log('📥 Response status:', r.status);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    })
+    .then(function(data) {
         if (data.success) {
             showToast('✅ Mahsulot o\'chirildi!', 'success');
             loadProductsTable();
+            if (typeof loadPOSProducts === 'function') {
+                loadPOSProducts();
+            }
         } else {
             showToast('❌ Xatolik: ' + (data.message || 'Noma\'lum xatolik'), 'error');
         }
-    }).catch(function(err) {
-        console.error('❌ Server xatosi:', err);
-        showToast('❌ Server xatosi: ' + err.message, 'error');
+    })
+    .catch(function(err) {
+        console.error('❌ Delete error:', err);
+        showToast('❌ O\'chirishda xatolik: ' + err.message, 'error');
     });
 }
 
 // ============================================
-// LOAD PRODUCTS TABLE
+// LOAD PRODUCTS TABLE - TUZATILGAN
 // ============================================
 function loadProductsTable() {
-    console.log('🔄 Mahsulotlar jadvali yuklanmoqda...');
+    console.log('📤 Mahsulotlar jadvali yuklanmoqda...');
     
-    API.getProducts().then(function(data) {
-        var tbody = document.getElementById('productsTableBody');
-        if (!tbody) return;
-        
-        if (!data.success || data.data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center">Mahsulotlar yo\'q</td></tr>';
-            return;
-        }
-        
-        var html = '';
-        data.data.forEach(function(p) {
-            var margin = p.cost_price ? (((p.price - p.cost_price) / p.cost_price * 100).toFixed(1)) : '-';
-            var marginColor = p.price > p.cost_price ? '#27ae60' : '#e74c3c';
-            
-            html += '<tr>';
-            html += '<td>';
-            if (p.image) {
-                html += '<img src="' + p.image + '" style="width:40px;height:40px;object-fit:cover;border-radius:6px;">';
-            } else {
-                html += '<div style="width:40px;height:40px;background:#f0f2f5;border-radius:6px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box"></i></div>';
+    fetch(API_BASE + '/products')
+        .then(function(r) {
+            console.log('📥 Response status:', r.status);
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
+        .then(function(data) {
+            console.log('📥 Mahsulotlar yuklandi, soni:', data.data ? data.data.length : 0);
+            renderProductsTable(data.data || []);
+        })
+        .catch(function(err) {
+            console.error('❌ Load products error:', err);
+            var tbody = document.getElementById('productsTableBody');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center" style="color:#e74c3c;">❌ Yuklashda xatolik: ' + err.message + '</td></tr>';
             }
-            html += '</td>';
-            html += '<td><strong>' + (p.name || 'N/A') + '</strong></td>';
-            html += '<td>' + (p.code || '-') + '</td>';
-            html += '<td>' + ((p.cost_price || 0).toLocaleString()) + '</td>';
-            html += '<td>' + ((p.price || 0).toLocaleString()) + '</td>';
-            html += '<td style="color:' + marginColor + ';font-weight:bold;">' + margin + '%</td>';
-            html += '<td>' + (p.quantity || 0) + '</td>';
-            html += '<td>' + (p.unit || 'dona') + '</td>';
-            html += '<td>';
-            html += '<button class="btn btn-primary btn-sm" onclick="editProduct(' + p.id + ')"><i class="fas fa-edit"></i></button> ';
-            html += '<button class="btn btn-danger btn-sm" onclick="deleteProduct(' + p.id + ')"><i class="fas fa-trash"></i></button>';
-            html += '</td>';
-            html += '</tr>';
         });
+}
+
+// ============================================
+// RENDER PRODUCTS TABLE
+// ============================================
+function renderProductsTable(products) {
+    var tbody = document.getElementById('productsTableBody');
+    if (!tbody) return;
+    
+    if (!products || products.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center">📭 Mahsulotlar mavjud emas</td></tr>';
+        return;
+    }
+    
+    var html = '';
+    products.forEach(function(p) {
+        var margin = p.cost_price ? (((p.price - p.cost_price) / p.cost_price * 100).toFixed(1)) : '-';
+        var marginColor = p.price > p.cost_price ? '#27ae60' : '#e74c3c';
         
-        tbody.innerHTML = html;
-        console.log('✅ Mahsulotlar jadvali yangilandi, soni:', data.data.length);
+        html += '<tr>';
+        html += '<td>';
+        if (p.image) {
+            html += '<img src="' + p.image + '" style="width:40px;height:40px;object-fit:cover;border-radius:6px;">';
+        } else {
+            html += '<div style="width:40px;height:40px;background:#f0f2f5;border-radius:6px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box"></i></div>';
+        }
+        html += '</td>';
+        html += '<td><strong>' + escapeHtml(p.name || 'N/A') + '</strong></td>';
+        html += '<td>' + escapeHtml(p.code || '-') + '</td>';
+        html += '<td>' + ((p.cost_price || 0).toLocaleString()) + '</td>';
+        html += '<td>' + ((p.price || 0).toLocaleString()) + '</td>';
+        html += '<td style="color:' + marginColor + ';font-weight:bold;">' + margin + '%</td>';
+        html += '<td>' + (p.quantity || 0) + '</td>';
+        html += '<td>' + escapeHtml(p.unit || 'dona') + '</td>';
+        html += '<td>';
+        html += '<button class="btn btn-primary btn-sm" onclick="editProduct(' + p.id + ')"><i class="fas fa-edit"></i></button> ';
+        html += '<button class="btn btn-danger btn-sm" onclick="deleteProduct(' + p.id + ')"><i class="fas fa-trash"></i></button>';
+        html += '</td>';
+        html += '</tr>';
     });
+    
+    tbody.innerHTML = html;
+}
+
+// ============================================
+// ESCAPE HTML (Xavfsizlik uchun)
+// ============================================
+function escapeHtml(text) {
+    if (!text) return '';
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // ============================================
@@ -369,12 +443,33 @@ if (typeof showToast === 'undefined') {
         type = type || 'success';
         var toast = document.createElement('div');
         toast.className = 'toast ' + type;
-        toast.textContent = message;
+        var icons = {
+            success: '✅ ',
+            error: '❌ ',
+            warning: '⚠️ ',
+            info: 'ℹ️ '
+        };
+        toast.textContent = (icons[type] || 'ℹ️ ') + message;
+        toast.style.cssText = 'position:fixed;bottom:30px;right:30px;padding:14px 24px;border-radius:10px;color:#fff;font-weight:500;z-index:9999;animation:slideIn 0.4s ease;box-shadow:0 10px 40px rgba(0,0,0,0.2);font-size:14px;max-width:400px;';
+        
+        var colors = {
+            success: '#22c55e',
+            error: '#ef4444',
+            warning: '#f59e0b',
+            info: '#4f46e5'
+        };
+        toast.style.background = colors[type] || '#4f46e5';
+        
         document.body.appendChild(toast);
         setTimeout(function() {
-            if (toast.parentNode) toast.remove();
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(30px)';
+            toast.style.transition = 'all 0.4s ease';
+            setTimeout(function() {
+                if (toast.parentNode) toast.remove();
+            }, 400);
         }, 3000);
     }
 }
 
-console.log('✅ Products.js loaded');
+console.log('✅ Products.js loaded - API_BASE:', API_BASE);
