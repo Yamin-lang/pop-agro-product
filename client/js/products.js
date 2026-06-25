@@ -3,19 +3,13 @@
 // ============================================
 
 // ============================================
-// API_BASE ni aniqlash (agar mavjud bo'lmasa)
+// 🔥 API_BASE ni tekshirish
 // ============================================
 if (typeof API_BASE === 'undefined') {
-    var API_BASE = (function() {
-        if (window.location.hostname.includes('vercel.app')) {
-            return window.location.origin + '/api';
-        }
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            return 'http://localhost:5000/api';
-        }
-        return window.location.origin + '/api';
-    })();
-    console.log('📦 API_BASE set to:', API_BASE);
+    var API_BASE = 'https://pop-agro-product.vercel.app/api';
+    console.log('📦 API_BASE set in products.js:', API_BASE);
+} else {
+    console.log('📦 API_BASE from api.js:', API_BASE);
 }
 
 var editingProductId = null;
@@ -60,7 +54,7 @@ function loadProducts(container) {
                         <input type="number" id="pQuantity" placeholder="Miqdor">
                     </div>
                     <div class="form-group">
-                        <label>Birlik (kg/dona/m)</label>
+                        <label>Birlik</label>
                         <select id="pUnit">
                             <option value="dona">Dona</option>
                             <option value="kg">Kg</option>
@@ -99,7 +93,7 @@ function loadProducts(container) {
                         </tr>
                     </thead>
                     <tbody id="productsTableBody">
-                        <tr><td colspan="9" class="text-center">Yuklanmoqda...</td></tr>
+                        <tr><td colspan="9" style="text-align:center;padding:30px;">⏳ Yuklanmoqda...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -172,7 +166,7 @@ function clearProductForm() {
 }
 
 // ============================================
-// SAVE PRODUCT (CREATE + UPDATE) - TUZATILGAN
+// SAVE PRODUCT
 // ============================================
 function saveProduct() {
     var nameInput = document.getElementById('pName');
@@ -220,13 +214,17 @@ function saveProduct() {
 }
 
 // ============================================
-// SEND PRODUCT - TUZATILGAN (API_BASE bilan)
+// SEND PRODUCT - 🔥 TUZATILGAN!
 // ============================================
 function sendProduct(data) {
     var method = editingProductId ? 'PUT' : 'POST';
-    var url = editingProductId ? API_BASE + '/products/' + editingProductId : API_BASE + '/products';
+    var url = editingProductId 
+        ? API_BASE + '/products/' + editingProductId 
+        : API_BASE + '/products';
     
-    console.log('📤 SEND PRODUCT - URL:', url, 'Method:', method, 'Data:', data);
+    console.log('📤 SEND PRODUCT - URL:', url);
+    console.log('📤 Method:', method);
+    console.log('📤 Data:', data);
     
     fetch(url, {
         method: method,
@@ -236,17 +234,16 @@ function sendProduct(data) {
     .then(function(response) {
         console.log('📥 Response status:', response.status);
         if (!response.ok) {
-            throw new Error('HTTP ' + response.status + ' - ' + response.statusText);
+            throw new Error('HTTP ' + response.status);
         }
         return response.json();
     })
     .then(function(result) {
-        console.log('📥 Response data:', result);
+        console.log('📥 Response:', result);
         if (result.success) {
             showToast(editingProductId ? '✅ Mahsulot yangilandi!' : '✅ Mahsulot qo\'shildi!', 'success');
             hideAddProduct();
             loadProductsTable();
-            // POS dagi mahsulotlarni ham yangilash
             if (typeof loadPOSProducts === 'function') {
                 loadPOSProducts();
             }
@@ -261,13 +258,15 @@ function sendProduct(data) {
 }
 
 // ============================================
-// EDIT PRODUCT - TAHRIRLASH
+// EDIT PRODUCT
 // ============================================
 function editProduct(id) {
     console.log('✏️ Edit product - ID:', id);
+    console.log('📤 Fetching from:', API_BASE + '/products');
     
     fetch(API_BASE + '/products')
         .then(function(r) {
+            console.log('📥 Response status:', r.status);
             if (!r.ok) throw new Error('HTTP ' + r.status);
             return r.json();
         })
@@ -286,20 +285,12 @@ function editProduct(id) {
                 var formEl = document.getElementById('productForm');
                 if (formEl) formEl.style.display = 'block';
                 
-                // Ma'lumotlarni formaga yozish
-                var nameInput = document.getElementById('pName');
-                var codeInput = document.getElementById('pCode');
-                var costInput = document.getElementById('pCostPrice');
-                var sellInput = document.getElementById('pSellPrice');
-                var qtyInput = document.getElementById('pQuantity');
-                var unitInput = document.getElementById('pUnit');
-                
-                if (nameInput) nameInput.value = product.name || '';
-                if (codeInput) codeInput.value = product.code || '';
-                if (costInput) costInput.value = product.cost_price || 0;
-                if (sellInput) sellInput.value = product.price || 0;
-                if (qtyInput) qtyInput.value = product.quantity || 0;
-                if (unitInput) unitInput.value = product.unit || 'dona';
+                document.getElementById('pName').value = product.name || '';
+                document.getElementById('pCode').value = product.code || '';
+                document.getElementById('pCostPrice').value = product.cost_price || 0;
+                document.getElementById('pSellPrice').value = product.price || 0;
+                document.getElementById('pQuantity').value = product.quantity || 0;
+                document.getElementById('pUnit').value = product.unit || 'dona';
                 
                 calcMargin();
                 
@@ -331,9 +322,10 @@ function editProduct(id) {
 function deleteProduct(id) {
     if (!confirm('Mahsulotni o\'chirishni xohlaysizmi?')) return;
     
-    console.log('🗑️ Delete product - ID:', id);
+    var url = API_BASE + '/products/' + id;
+    console.log('🗑️ DELETE - URL:', url);
     
-    fetch(API_BASE + '/products/' + id, {
+    fetch(url, {
         method: 'DELETE'
     })
     .then(function(r) {
@@ -359,15 +351,18 @@ function deleteProduct(id) {
 }
 
 // ============================================
-// LOAD PRODUCTS TABLE - TUZATILGAN
+// LOAD PRODUCTS TABLE - 🔥 TUZATILGAN!
 // ============================================
 function loadProductsTable() {
-    console.log('📤 Mahsulotlar jadvali yuklanmoqda...');
+    var url = API_BASE + '/products';
+    console.log('📤 Mahsulotlar yuklanmoqda - URL:', url);
     
-    fetch(API_BASE + '/products')
+    fetch(url)
         .then(function(r) {
             console.log('📥 Response status:', r.status);
-            if (!r.ok) throw new Error('HTTP ' + r.status);
+            if (!r.ok) {
+                throw new Error('HTTP ' + r.status);
+            }
             return r.json();
         })
         .then(function(data) {
@@ -378,7 +373,7 @@ function loadProductsTable() {
             console.error('❌ Load products error:', err);
             var tbody = document.getElementById('productsTableBody');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="9" class="text-center" style="color:#e74c3c;">❌ Yuklashda xatolik: ' + err.message + '</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:#e74c3c;">❌ Yuklashda xatolik: ' + err.message + '</td></tr>';
             }
         });
 }
@@ -391,7 +386,7 @@ function renderProductsTable(products) {
     if (!tbody) return;
     
     if (!products || products.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center">📭 Mahsulotlar mavjud emas</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;">📭 Mahsulotlar mavjud emas</td></tr>';
         return;
     }
     
@@ -426,7 +421,7 @@ function renderProductsTable(products) {
 }
 
 // ============================================
-// ESCAPE HTML (Xavfsizlik uchun)
+// ESCAPE HTML
 // ============================================
 function escapeHtml(text) {
     if (!text) return '';
@@ -436,38 +431,24 @@ function escapeHtml(text) {
 }
 
 // ============================================
-// TOAST (agar mavjud bo'lmasa)
+// TOAST
 // ============================================
 if (typeof showToast === 'undefined') {
     function showToast(message, type) {
         type = type || 'success';
         var toast = document.createElement('div');
         toast.className = 'toast ' + type;
-        var icons = {
-            success: '✅ ',
-            error: '❌ ',
-            warning: '⚠️ ',
-            info: 'ℹ️ '
-        };
+        var icons = { success: '✅ ', error: '❌ ', warning: '⚠️ ', info: 'ℹ️ ' };
         toast.textContent = (icons[type] || 'ℹ️ ') + message;
         toast.style.cssText = 'position:fixed;bottom:30px;right:30px;padding:14px 24px;border-radius:10px;color:#fff;font-weight:500;z-index:9999;animation:slideIn 0.4s ease;box-shadow:0 10px 40px rgba(0,0,0,0.2);font-size:14px;max-width:400px;';
-        
-        var colors = {
-            success: '#22c55e',
-            error: '#ef4444',
-            warning: '#f59e0b',
-            info: '#4f46e5'
-        };
+        var colors = { success: '#22c55e', error: '#ef4444', warning: '#f59e0b', info: '#4f46e5' };
         toast.style.background = colors[type] || '#4f46e5';
-        
         document.body.appendChild(toast);
         setTimeout(function() {
             toast.style.opacity = '0';
             toast.style.transform = 'translateX(30px)';
             toast.style.transition = 'all 0.4s ease';
-            setTimeout(function() {
-                if (toast.parentNode) toast.remove();
-            }, 400);
+            setTimeout(function() { if (toast.parentNode) toast.remove(); }, 400);
         }, 3000);
     }
 }
