@@ -1,8 +1,22 @@
 // ============================================
-// API.JS - SERVER BOG'LANISH
+// API.JS - SERVER BOG'LANISH (VERCEL UCHUN)
 // ============================================
 
-var API_BASE = 'http://localhost:5000/api';
+// ============================================
+// 🔥 AVTOMATIK BASE URL (Vercel yoki Local)
+// ============================================
+var API_BASE = (function() {
+    // Agar Vercel da bo'lsa, production URL ni ishlat
+    if (window.location.hostname === 'pop-agro-product.vercel.app') {
+        return 'https://pop-agro-product.vercel.app/api';
+    }
+    // Agar localhost da bo'lsa
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:5000/api';
+    }
+    // Agar boshqa domain bo'lsa (masalan preview)
+    return window.location.origin + '/api';
+})();
 
 console.log('✅ API loaded, base:', API_BASE);
 
@@ -111,10 +125,14 @@ var API = {
         });
     },
     
-    getSales: function(date) {
+    getSales: function(date, shiftId) {
         var queryDate = date || new Date().toISOString().split('T')[0];
-        console.log('📤 API.getSales called - date:', queryDate);
-        return fetch(API_BASE + '/sales/daily?date=' + queryDate)
+        var url = API_BASE + '/sales/daily?date=' + queryDate;
+        if (shiftId) {
+            url += '&shift_id=' + shiftId;
+        }
+        console.log('📤 API.getSales called - url:', url);
+        return fetch(url)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
                 return r.json();
@@ -284,6 +302,82 @@ var API = {
             });
     },
     
+    // ==================== 📊 QO'SHIMCHA HISOBOTLAR ====================
+    
+    getMonthlyReport: function(year, month) {
+        var now = new Date();
+        var y = year || now.getFullYear();
+        var m = month || (now.getMonth() + 1);
+        console.log('📤 API.getMonthlyReport called - year:', y, 'month:', m);
+        return fetch(API_BASE + '/reports/monthly?year=' + y + '&month=' + m)
+            .then(function(r) {
+                console.log('📥 Response status:', r.status);
+                return r.json();
+            })
+            .then(function(data) {
+                console.log('📥 Monthly report:', data);
+                return data;
+            })
+            .catch(function(err) {
+                console.error('❌ Get monthly report error:', err);
+                return { success: false, message: err.message, data: {} };
+            });
+    },
+    
+    getInventoryReport: function() {
+        console.log('📤 API.getInventoryReport called');
+        return fetch(API_BASE + '/reports/inventory')
+            .then(function(r) {
+                console.log('📥 Response status:', r.status);
+                return r.json();
+            })
+            .then(function(data) {
+                console.log('📥 Inventory report:', data);
+                return data;
+            })
+            .catch(function(err) {
+                console.error('❌ Get inventory report error:', err);
+                return { success: false, message: err.message, data: {} };
+            });
+    },
+    
+    getMonthlyProfit: function(year, month) {
+        var now = new Date();
+        var y = year || now.getFullYear();
+        var m = month || (now.getMonth() + 1);
+        console.log('📤 API.getMonthlyProfit called - year:', y, 'month:', m);
+        return fetch(API_BASE + '/reports/monthly-profit?year=' + y + '&month=' + m)
+            .then(function(r) {
+                console.log('📥 Response status:', r.status);
+                return r.json();
+            })
+            .then(function(data) {
+                console.log('📥 Monthly profit:', data);
+                return data;
+            })
+            .catch(function(err) {
+                console.error('❌ Get monthly profit error:', err);
+                return { success: false, message: err.message, data: {} };
+            });
+    },
+    
+    getAllReports: function() {
+        console.log('📤 API.getAllReports called');
+        return fetch(API_BASE + '/reports/all')
+            .then(function(r) {
+                console.log('📥 Response status:', r.status);
+                return r.json();
+            })
+            .then(function(data) {
+                console.log('📥 All reports:', data);
+                return data;
+            })
+            .catch(function(err) {
+                console.error('❌ Get all reports error:', err);
+                return { success: false, message: err.message, data: {} };
+            });
+    },
+    
     // ==================== EMPLOYEES ====================
     getEmployees: function() {
         console.log('📤 API.getEmployees called');
@@ -398,6 +492,29 @@ var API = {
                 console.error('❌ Get all returns error:', err);
                 return { success: false, message: err.message, data: [] };
             });
+    },
+    
+    // ==================== GENERIC REQUEST (QO'SHIMCHA) ====================
+    request: function(url, options) {
+        options = options || {};
+        console.log('📤 API.request called - url:', url);
+        return fetch(API_BASE + url, {
+            method: options.method || 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            body: options.body ? JSON.stringify(options.body) : undefined
+        })
+        .then(function(r) {
+            console.log('📥 Response status:', r.status);
+            return r.json();
+        })
+        .then(function(data) {
+            console.log('📥 Request response:', data);
+            return data;
+        })
+        .catch(function(err) {
+            console.error('❌ Request error:', err);
+            return { success: false, message: err.message };
+        });
     }
 };
 

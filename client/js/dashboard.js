@@ -167,7 +167,9 @@ function refreshDashboard() {
     }
     
     loadDashboardData();
-    showToast('✅ Dashboard yangilandi', 'success');
+    if (typeof showToast === 'function') {
+        showToast('✅ Dashboard yangilandi', 'success');
+    }
 }
 
 // ============================================
@@ -204,7 +206,7 @@ function refreshDashboard() {
 })();
 
 // ============================================
-// LOAD DASHBOARD DATA
+// LOAD DASHBOARD DATA (TUZATILGAN - HASHTAG YO'Q)
 // ============================================
 function loadDashboardData() {
     console.log('📊 Dashboard ma\'lumotlari yuklanmoqda...');
@@ -213,9 +215,8 @@ function loadDashboardData() {
     var now = new Date();
     var month = now.getMonth() + 1;
     var year = now.getFullYear();
-    var monthStr = String(month).padStart(2, '0');
     
-    // JORIY SMENANI TEKSHIRISH
+    // 1. JORIY SMENANI TEKSHIRISH
     API.getCurrentShift().then(function(shiftData) {
         console.log('📥 Smena holati:', shiftData);
         
@@ -225,9 +226,9 @@ function loadDashboardData() {
         // SMENA HOLATINI YANGILASH
         updateShiftStatus(shiftData, isShiftActive);
         
-        // 1. KUNLIK SAVDO
+        // 2. KUNLIK SAVDO
         if (isShiftActive && shiftId) {
-            var url = API_BASE + '/sales/daily?date=' + today + '&shift_id=' + shiftId;
+            var url = API_BASE + '/api/sales/daily?date=' + today + '&shift_id=' + shiftId;
             console.log('📤 Kunlik savdo so\'rovi:', url);
             
             fetch(url)
@@ -245,7 +246,7 @@ function loadDashboardData() {
             resetDailyStats();
         }
         
-        // 2. OYLIK SAVDO
+        // 3. OYLIK SAVDO
         API.getMonthlySales(year, month).then(function(data) {
             console.log('📥 Oylik savdo javobi:', data);
             if (data.success && data.data) {
@@ -261,10 +262,10 @@ function loadDashboardData() {
             console.error('❌ Monthly error:', err);
         });
         
-        // Mahsulotlar soni
+        // 4. MAHSULOTLAR SONI
         loadProductsCount();
         
-        // QO'SHIMCHA HISOBOTLAR
+        // 5. QO'SHIMCHA HISOBOTLAR
         loadReports(year, month);
         
     }).catch(function(err) {
@@ -374,6 +375,11 @@ function updateShiftStatus(shiftData, isActive) {
 // KUNLIK STATISTIKANI YANGILASH
 // ============================================
 function updateDailyStats(data) {
+    if (!data || !data.length) {
+        resetDailyStats();
+        return;
+    }
+    
     var total = data.reduce(function(s, item) { return s + (item.total_price || 0); }, 0);
     var cash = data.filter(function(s) { return s.payment_type === 'cash'; });
     var terminal = data.filter(function(s) { return s.payment_type === 'terminal'; });
@@ -480,14 +486,17 @@ function renderProductList(elementId, products, label) {
     var html = '';
     products.forEach(function(p) {
         var countClass = '';
+        var displayValue = label === 'sotilgan' ? (p.sales_count || 0) : (p.quantity || 0);
+        
         if (label === 'qolgan') {
             if ((p.quantity || 0) < 3) countClass = 'low';
             else if ((p.quantity || 0) < 10) countClass = 'medium';
             else countClass = 'high';
         }
+        
         html += '<div class="product-item">';
         html += '<span class="product-name">' + (p.name || 'N/A') + '</span>';
-        html += '<span class="product-count ' + countClass + '">' + (p.quantity || 0) + ' ' + label + '</span>';
+        html += '<span class="product-count ' + countClass + '">' + displayValue + ' ' + label + '</span>';
         html += '</div>';
     });
     
