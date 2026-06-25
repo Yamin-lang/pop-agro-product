@@ -8,7 +8,7 @@
 var API_BASE = (function() {
     // Agar Vercel da bo'lsa
     if (window.location.hostname.includes('vercel.app')) {
-        return window.location.origin + '/api';
+        return 'https://pop-agro-product.vercel.app/api';  // 🔥 TO'LIQ URL
     }
     // Agar localhost da bo'lsa
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -21,7 +21,7 @@ var API_BASE = (function() {
 // Global qilish
 window.API_BASE = API_BASE;
 
-console.log('✅ API loaded, base:', API_BASE);
+console.log('✅ API_BASE:', API_BASE);
 
 // ============================================
 // API SO'ROVLAR
@@ -29,7 +29,7 @@ console.log('✅ API loaded, base:', API_BASE);
 var API = {
     // ==================== PRODUCTS ====================
     getProducts: function() {
-        console.log('📤 API.getProducts called');
+        console.log('📤 API.getProducts - URL:', API_BASE + '/products');
         return fetch(API_BASE + '/products')
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
@@ -49,7 +49,7 @@ var API = {
     },
     
     addProduct: function(data) {
-        console.log('📤 API.addProduct called with:', data);
+        console.log('📤 API.addProduct - URL:', API_BASE + '/products');
         return fetch(API_BASE + '/products', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -73,7 +73,7 @@ var API = {
     },
     
     updateProduct: function(id, data) {
-        console.log('📤 API.updateProduct called - ID:', id);
+        console.log('📤 API.updateProduct - URL:', API_BASE + '/products/' + id);
         return fetch(API_BASE + '/products/' + id, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -97,7 +97,7 @@ var API = {
     },
     
     deleteProduct: function(id) {
-        console.log('🗑️ API.deleteProduct called - ID:', id);
+        console.log('🗑️ API.deleteProduct - URL:', API_BASE + '/products/' + id);
         return fetch(API_BASE + '/products/' + id, {
             method: 'DELETE'
         })
@@ -120,7 +120,7 @@ var API = {
     
     // ==================== SALES ====================
     addSale: function(data) {
-        console.log('📤 API.addSale called');
+        console.log('📤 API.addSale - URL:', API_BASE + '/sales');
         return fetch(API_BASE + '/sales', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -149,7 +149,7 @@ var API = {
         if (shiftId) {
             url += '&shift_id=' + shiftId;
         }
-        console.log('📤 API.getSales - url:', url);
+        console.log('📤 API.getSales - URL:', url);
         return fetch(url)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
@@ -171,8 +171,9 @@ var API = {
         var now = new Date();
         var y = year || now.getFullYear();
         var m = month || (now.getMonth() + 1);
-        console.log('📤 API.getMonthlySales - year:', y, 'month:', m);
-        return fetch(API_BASE + '/sales/monthly?year=' + y + '&month=' + m)
+        var url = API_BASE + '/sales/monthly?year=' + y + '&month=' + m;
+        console.log('📤 API.getMonthlySales - URL:', url);
+        return fetch(url)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
                 if (!r.ok) {
@@ -191,7 +192,7 @@ var API = {
     
     // ==================== SHIFTS ====================
     openShift: function(balance) {
-        console.log('📤 API.openShift - balance:', balance);
+        console.log('📤 API.openShift - URL:', API_BASE + '/shifts/open');
         return fetch(API_BASE + '/shifts/open', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -214,7 +215,7 @@ var API = {
     },
     
     closeShift: function(balance) {
-        console.log('📤 API.closeShift - balance:', balance);
+        console.log('📤 API.closeShift - URL:', API_BASE + '/shifts/close');
         return fetch(API_BASE + '/shifts/close', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -237,7 +238,7 @@ var API = {
     },
     
     getCurrentShift: function() {
-        console.log('📤 API.getCurrentShift called');
+        console.log('📤 API.getCurrentShift - URL:', API_BASE + '/shifts/current');
         return fetch(API_BASE + '/shifts/current')
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
@@ -256,7 +257,7 @@ var API = {
     },
     
     getShiftHistory: function() {
-        console.log('📤 API.getShiftHistory called');
+        console.log('📤 API.getShiftHistory - URL:', API_BASE + '/shifts/history');
         return fetch(API_BASE + '/shifts/history')
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
@@ -276,7 +277,7 @@ var API = {
     
     // ==================== DEBTORS ====================
     getDebtors: function() {
-        console.log('📤 API.getDebtors called');
+        console.log('📤 API.getDebtors - URL:', API_BASE + '/debtors');
         return fetch(API_BASE + '/debtors')
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
@@ -296,7 +297,7 @@ var API = {
     },
     
     payDebt: function(id, amount) {
-        console.log('📤 API.payDebt called - ID:', id, 'Amount:', amount);
+        console.log('📤 API.payDebt - URL:', API_BASE + '/debtors/' + id + '/pay');
         return fetch(API_BASE + '/debtors/' + id + '/pay', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -322,8 +323,9 @@ var API = {
     // ==================== REPORTS ====================
     getDailyReport: function(date) {
         var queryDate = date || new Date().toISOString().split('T')[0];
-        console.log('📤 API.getDailyReport - date:', queryDate);
-        return fetch(API_BASE + '/reports/daily?date=' + queryDate)
+        var url = API_BASE + '/reports/daily?date=' + queryDate;
+        console.log('📤 API.getDailyReport - URL:', url);
+        return fetch(url)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
                 if (!r.ok) {
@@ -345,8 +347,9 @@ var API = {
         var now = new Date();
         var y = year || now.getFullYear();
         var m = month || (now.getMonth() + 1);
-        console.log('📤 API.getMonthlyReport - year:', y, 'month:', m);
-        return fetch(API_BASE + '/reports/monthly?year=' + y + '&month=' + m)
+        var url = API_BASE + '/reports/monthly?year=' + y + '&month=' + m;
+        console.log('📤 API.getMonthlyReport - URL:', url);
+        return fetch(url)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
                 if (!r.ok) {
@@ -364,7 +367,7 @@ var API = {
     },
     
     getInventoryReport: function() {
-        console.log('📤 API.getInventoryReport called');
+        console.log('📤 API.getInventoryReport - URL:', API_BASE + '/reports/inventory');
         return fetch(API_BASE + '/reports/inventory')
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
@@ -386,8 +389,9 @@ var API = {
         var now = new Date();
         var y = year || now.getFullYear();
         var m = month || (now.getMonth() + 1);
-        console.log('📤 API.getMonthlyProfit - year:', y, 'month:', m);
-        return fetch(API_BASE + '/reports/monthly-profit?year=' + y + '&month=' + m)
+        var url = API_BASE + '/reports/monthly-profit?year=' + y + '&month=' + m;
+        console.log('📤 API.getMonthlyProfit - URL:', url);
+        return fetch(url)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
                 if (!r.ok) {
@@ -405,7 +409,7 @@ var API = {
     },
     
     getAllReports: function() {
-        console.log('📤 API.getAllReports called');
+        console.log('📤 API.getAllReports - URL:', API_BASE + '/reports/all');
         return fetch(API_BASE + '/reports/all')
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
@@ -425,7 +429,7 @@ var API = {
     
     // ==================== EMPLOYEES ====================
     getEmployees: function() {
-        console.log('📤 API.getEmployees called');
+        console.log('📤 API.getEmployees - URL:', API_BASE + '/employees');
         return fetch(API_BASE + '/employees')
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
@@ -445,7 +449,7 @@ var API = {
     },
     
     addEmployee: function(data) {
-        console.log('📤 API.addEmployee called with:', data);
+        console.log('📤 API.addEmployee - URL:', API_BASE + '/employees');
         return fetch(API_BASE + '/employees', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -469,7 +473,7 @@ var API = {
     },
     
     deleteEmployee: function(id) {
-        console.log('📤 API.deleteEmployee called - ID:', id);
+        console.log('📤 API.deleteEmployee - URL:', API_BASE + '/employees/' + id);
         return fetch(API_BASE + '/employees/' + id, {
             method: 'DELETE'
         })
@@ -492,7 +496,7 @@ var API = {
     
     // ==================== RETURNS (QAYTARISH) ====================
     returnProduct: function(data) {
-        console.log('📤 API.returnProduct called with:', data);
+        console.log('📤 API.returnProduct - URL:', API_BASE + '/returns');
         return fetch(API_BASE + '/returns', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -517,8 +521,9 @@ var API = {
     
     getReturns: function(date) {
         var queryDate = date || new Date().toISOString().split('T')[0];
-        console.log('📤 API.getReturns - date:', queryDate);
-        return fetch(API_BASE + '/returns?date=' + queryDate)
+        var url = API_BASE + '/returns?date=' + queryDate;
+        console.log('📤 API.getReturns - URL:', url);
+        return fetch(url)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
                 if (!r.ok) {
@@ -537,7 +542,7 @@ var API = {
     },
     
     getAllReturns: function() {
-        console.log('📤 API.getAllReturns called');
+        console.log('📤 API.getAllReturns - URL:', API_BASE + '/returns/all');
         return fetch(API_BASE + '/returns/all')
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
@@ -559,8 +564,9 @@ var API = {
     // ==================== GENERIC REQUEST ====================
     request: function(url, options) {
         options = options || {};
-        console.log('📤 API.request - url:', url);
-        return fetch(API_BASE + url, {
+        var fullUrl = API_BASE + url;
+        console.log('📤 API.request - URL:', fullUrl);
+        return fetch(fullUrl, {
             method: options.method || 'GET',
             headers: { 'Content-Type': 'application/json' },
             body: options.body ? JSON.stringify(options.body) : undefined
