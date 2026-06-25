@@ -3,20 +3,14 @@
 // ============================================
 
 // ============================================
-// 🔥 API BASE - AVTOMATIK ANIQLASH
+// 🔥 API BASE - QO'LDA SOZLANGAN
 // ============================================
-var API_BASE = (function() {
-    // Agar Vercel da bo'lsa
-    if (window.location.hostname.includes('vercel.app')) {
-        return window.location.origin + '/api';
-    }
-    // Agar localhost da bo'lsa
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'http://localhost:5000/api';
-    }
-    // Agar boshqa domain bo'lsa
-    return window.location.origin + '/api';
-})();
+var API_BASE = 'https://pop-agro-product.vercel.app/api';
+
+// Agar localhost da bo'lsa
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    API_BASE = 'http://localhost:5000/api';
+}
 
 // Global qilish
 window.API_BASE = API_BASE;
