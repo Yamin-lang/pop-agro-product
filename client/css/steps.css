@@ -1,0 +1,202 @@
+/* ============================================
+   BOSQICHLAR (STEPS) - CHIROYLI DIZAYN
+   ============================================ */
+
+.steps-container {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 24px 28px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(0,0,0,0.03);
+}
+
+.steps-header {
+    margin-bottom: 20px;
+}
+
+.steps-header h2 {
+    font-size: 18px;
+    color: var(--primary-dark);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.steps-header h2 i {
+    color: var(--primary);
+}
+
+.steps-header p {
+    color: var(--text-light);
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+.steps-wrapper {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    position: relative;
+    flex-wrap: wrap;
+}
+
+/* ===== STEP ITEM ===== */
+.step-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    flex: 1;
+    min-width: 180px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    transition: var(--transition);
+    position: relative;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.step-item:hover {
+    background: var(--bg-light);
+}
+
+.step-item.active {
+    border-color: var(--primary);
+    background: var(--success-light);
+}
+
+.step-item.completed {
+    border-color: var(--success);
+    background: var(--success-light);
+}
+
+.step-item.completed .step-number {
+    background: var(--success);
+    color: white;
+}
+
+.step-item.active .step-number {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 0 0 4px rgba(26, 79, 46, 0.15);
+}
+
+.step-item .step-number {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--bg-dark);
+    color: var(--text-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+    transition: var(--transition);
+}
+
+.step-item .step-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.step-item .step-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+}
+
+.step-item .step-desc {
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+.step-item .step-status {
+    margin-top: 6px;
+}
+
+.step-item .step-status .status-badge {
+    font-size: 11px;
+    padding: 2px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.step-item .step-status .status-badge.active {
+    background: var(--success-light);
+    color: var(--success);
+}
+
+.step-item .step-status .status-badge.inactive {
+    background: var(--bg-dark);
+    color: var(--text-light);
+}
+
+.step-item .step-status .status-badge.warning {
+    background: var(--warning-light);
+    color: var(--warning);
+}
+
+/* ===== STEP CONNECTOR ===== */
+.step-connector {
+    position: absolute;
+    right: -20px;
+    top: 30px;
+    width: 40px;
+    height: 2px;
+    background: var(--bg-dark);
+    z-index: 0;
+}
+
+.step-item.active .step-connector,
+.step-item.completed .step-connector {
+    background: var(--primary);
+}
+
+.step-item:last-child .step-connector {
+    display: none;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .steps-wrapper {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .step-item {
+        min-width: 100%;
+        padding: 10px 14px;
+    }
+    
+    .step-connector {
+        display: none !important;
+    }
+    
+    .steps-container {
+        padding: 16px 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .step-item {
+        padding: 8px 12px;
+        gap: 10px;
+    }
+    
+    .step-item .step-number {
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+    }
+    
+    .step-item .step-title {
+        font-size: 13px;
+    }
+    
+    .step-item .step-desc {
+        font-size: 11px;
+    }
+}

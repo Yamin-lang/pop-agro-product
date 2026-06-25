@@ -1,0 +1,313 @@
+/* ============================================
+   DASHBOARD - STATISTIKA KARTOCHKALARI
+   ============================================ */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: var(--bg-card);
+    padding: 20px 22px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.02);
+}
+
+.stat-card::after {
+    content: '';
+    position: absolute;
+    top: -60%;
+    right: -30%;
+    width: 80%;
+    height: 80%;
+    background: radial-gradient(circle, rgba(76, 175, 80, 0.03) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-hover);
+    border-color: rgba(26, 79, 46, 0.05);
+}
+
+.stat-card .stat-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: white;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.stat-card .stat-icon.cash {
+    background: linear-gradient(135deg, #1a4f2e, #4caf50);
+    box-shadow: 0 4px 15px rgba(26, 79, 46, 0.25);
+}
+
+.stat-card .stat-icon.card {
+    background: linear-gradient(135deg, #0d47a1, #42a5f5);
+    box-shadow: 0 4px 15px rgba(13, 71, 161, 0.25);
+}
+
+.stat-card .stat-icon.click {
+    background: linear-gradient(135deg, #4a148c, #ab47bc);
+    box-shadow: 0 4px 15px rgba(74, 20, 140, 0.25);
+}
+
+.stat-card .stat-icon.credit {
+    background: linear-gradient(135deg, #e65100, #ff9800);
+    box-shadow: 0 4px 15px rgba(230, 81, 0, 0.25);
+}
+
+.stat-card .stat-icon.total {
+    background: linear-gradient(135deg, #b71c1c, #ef5350);
+    box-shadow: 0 4px 15px rgba(183, 28, 28, 0.25);
+}
+
+.stat-card .stat-icon.monthly {
+    background: linear-gradient(135deg, #1a237e, #1e88e5);
+    box-shadow: 0 4px 15px rgba(26, 35, 126, 0.25);
+}
+
+.stat-card .stat-info {
+    flex: 1;
+    z-index: 1;
+}
+
+.stat-card .stat-info h3 {
+    font-size: 11px;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 3px;
+    font-weight: 600;
+}
+
+.stat-card .stat-info .stat-value {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.2;
+}
+
+.stat-card .stat-info .stat-change {
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 10px;
+    border-radius: 20px;
+}
+
+.stat-card .stat-info .stat-change.up {
+    color: var(--success);
+    background: var(--success-light);
+}
+
+.stat-card .stat-info .stat-change.down {
+    color: var(--danger);
+    background: var(--danger-light);
+}
+
+/* ============================================
+   DASHBOARD BOTTOM - KARTOCHKALAR
+   ============================================ */
+.dashboard-bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.card {
+    background: var(--bg-card);
+    padding: 20px 24px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+    border: 1px solid rgba(0,0,0,0.02);
+}
+
+.card:hover {
+    box-shadow: var(--shadow-hover);
+}
+
+.card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card h3 i {
+    color: var(--warning);
+    font-size: 16px;
+}
+
+.card .card-badge {
+    font-size: 11px;
+    background: var(--bg-dark);
+    padding: 3px 12px;
+    border-radius: 20px;
+    color: var(--text-light);
+}
+
+/* ============================================
+   PRODUCT LIST
+   ============================================ */
+.product-list {
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.product-list .product-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--bg-dark);
+    transition: var(--transition);
+}
+
+.product-list .product-item:hover {
+    background: var(--bg-light);
+    margin: 0 -8px;
+    padding: 10px 8px;
+    border-radius: 8px;
+}
+
+.product-list .product-item:last-child {
+    border-bottom: none;
+}
+
+.product-list .product-item .product-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.product-list .product-item .product-icon {
+    font-size: 20px;
+}
+
+.product-list .product-item .name {
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.product-list .product-item .name small {
+    color: var(--text-light);
+    font-weight: 400;
+    font-size: 12px;
+    display: block;
+}
+
+.product-list .product-item .quantity {
+    font-weight: 600;
+    padding: 2px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+}
+
+.product-list .product-item .quantity.danger {
+    color: var(--danger);
+    background: var(--danger-light);
+}
+
+.product-list .product-item .quantity.warning {
+    color: var(--warning);
+    background: var(--warning-light);
+}
+
+.product-list .product-item .quantity.success {
+    color: var(--success);
+    background: var(--success-light);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1024px) {
+    .dashboard-bottom {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+    }
+    
+    .stat-card {
+        padding: 14px 16px;
+        gap: 12px;
+    }
+    
+    .stat-card .stat-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+        border-radius: 10px;
+    }
+    
+    .stat-card .stat-info .stat-value {
+        font-size: 16px;
+    }
+    
+    .stat-card .stat-info h3 {
+        font-size: 9px;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    
+    .stat-card {
+        padding: 12px 14px;
+        gap: 10px;
+        border-radius: 10px;
+    }
+    
+    .stat-card .stat-icon {
+        width: 34px;
+        height: 34px;
+        font-size: 14px;
+        border-radius: 8px;
+    }
+    
+    .stat-card .stat-info .stat-value {
+        font-size: 14px;
+    }
+    
+    .card {
+        padding: 14px 16px;
+    }
+}

@@ -1,0 +1,801 @@
+// ============================================
+// POP-AGRO-PRODUCT SERVER (TO'LIQ)
+// ============================================
+
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const sqlite3 = require('sqlite3').verbose();
+
+const app = express();
+const PORT = 5000;
+
+// ============================================
+// MIDDLEWARE
+// ============================================
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Statik fayllar
+app.use(express.static(path.join(__dirname, '../client')));
+
+console.log('✅ Middleware loaded');
+
+// ============================================
+// DATABASE
+// ============================================
+const db = new sqlite3.Database(path.join(__dirname, 'database.db'), function(err) {
+    if (err) {
+        console.error('❌ Database connection error:', err.message);
+    } else {
+        console.log('✅ Database connected');
+    }
+});
+
+db.serialize(function() {
+    // Products
+    db.run(`
+        CREATE TABLE IF NOT EXISTS products (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            code TEXT,
+            price REAL DEFAULT 0,
+            cost_price REAL DEFAULT 0,
+            quantity REAL DEFAULT 0,
+            unit TEXT DEFAULT 'dona',
+            image TEXT,
+            sales_count INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `, function(err) {
+        if (err) console.error('Products table error:', err);
+        else console.log('✅ Products table ready');
+    });
+
+    // Sales
+    db.run(`
+        CREATE TABLE IF NOT EXISTS sales (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER,
+            quantity REAL DEFAULT 0,
+            price REAL DEFAULT 0,
+            total_price REAL DEFAULT 0,
+            discount REAL DEFAULT 0,
+            payment_type TEXT DEFAULT 'cash',
+            shift_id INTEGER,
+            sale_date DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `, function(err) {
+        if (err) console.error('Sales table error:', err);
+        else console.log('✅ Sales table ready');
+    });
+
+    // Shifts - yangi ustunlar bilan
+    db.run(`
+        CREATE TABLE IF NOT EXISTS shifts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            opening_balance REAL DEFAULT 0,
+            closing_balance REAL DEFAULT 0,
+            opened_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            closed_at DATETIME,
+            is_active INTEGER DEFAULT 1,
+            total_sales INTEGER DEFAULT 0,
+            total_amount REAL DEFAULT 0,
+            cash_amount REAL DEFAULT 0,
+            terminal_amount REAL DEFAULT 0,
+            credit_amount REAL DEFAULT 0,
+            sale_dates TEXT
+        )
+    `, function(err) {
+        if (err) console.error('Shifts table error:', err);
+        else console.log('✅ Shifts table ready');
+    });
+
+    // Debtors
+    db.run(`
+        CREATE TABLE IF NOT EXISTS debtors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            phone TEXT,
+            address TEXT,
+            amount REAL DEFAULT 0,
+            sale_id INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            paid_at DATETIME,
+            is_paid INTEGER DEFAULT 0
+        )
+    `, function(err) {
+        if (err) console.error('Debtors table error:', err);
+        else console.log('✅ Debtors table ready');
+    });
+
+    // Employees
+    db.run(`
+        CREATE TABLE IF NOT EXISTS employees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE,
+            password TEXT,
+            position TEXT,
+            phone TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `, function(err) {
+        if (err) console.error('Employees table error:', err);
+        else console.log('✅ Employees table ready');
+    });
+
+    // RETURNS (Qaytarish)
+    db.run(`
+        CREATE TABLE IF NOT EXISTS returns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sale_id INTEGER,
+            product_id INTEGER,
+            quantity REAL DEFAULT 0,
+            price REAL DEFAULT 0,
+            total_price REAL DEFAULT 0,
+            reason TEXT,
+            returned_by TEXT,
+            return_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (sale_id) REFERENCES sales(id),
+            FOREIGN KEY (product_id) REFERENCES products(id)
+        )
+    `, function(err) {
+        if (err) console.error('Returns table error:', err);
+        else console.log('✅ Returns table ready');
+    });
+
+    // Eski shifts jadvaliga yangi ustunlar qo'shish (agar mavjud bo'lsa)
+    db.run(`ALTER TABLE shifts ADD COLUMN total_sales INTEGER DEFAULT 0`, function(err) {
+        if (err && !err.message.includes('duplicate column')) console.log('⚠️ total_sales already exists or error');
+    });
+    db.run(`ALTER TABLE shifts ADD COLUMN total_amount REAL DEFAULT 0`, function(err) {
+        if (err && !err.message.includes('duplicate column')) console.log('⚠️ total_amount already exists or error');
+    });
+    db.run(`ALTER TABLE shifts ADD COLUMN cash_amount REAL DEFAULT 0`, function(err) {
+        if (err && !err.message.includes('duplicate column')) console.log('⚠️ cash_amount already exists or error');
+    });
+    db.run(`ALTER TABLE shifts ADD COLUMN terminal_amount REAL DEFAULT 0`, function(err) {
+        if (err && !err.message.includes('duplicate column')) console.log('⚠️ terminal_amount already exists or error');
+    });
+    db.run(`ALTER TABLE shifts ADD COLUMN credit_amount REAL DEFAULT 0`, function(err) {
+        if (err && !err.message.includes('duplicate column')) console.log('⚠️ credit_amount already exists or error');
+    });
+    db.run(`ALTER TABLE shifts ADD COLUMN sale_dates TEXT`, function(err) {
+        if (err && !err.message.includes('duplicate column')) console.log('⚠️ sale_dates already exists or error');
+    });
+});
+
+// ============================================
+// API - PRODUCTS
+// ============================================
+app.get('/api/products', function(req, res) {
+    console.log('📤 GET /api/products');
+    db.all('SELECT * FROM products ORDER BY id DESC', function(err, rows) {
+        if (err) {
+            console.error('Products error:', err);
+            return res.status(500).json({ success: false, message: err.message, data: [] });
+        }
+        res.json({ success: true, data: rows || [] });
+    });
+});
+
+app.post('/api/products', function(req, res) {
+    console.log('📤 POST /api/products');
+    var name = req.body.name;
+    var code = req.body.code;
+    var price = req.body.price;
+    var cost_price = req.body.cost_price;
+    var quantity = req.body.quantity;
+    var unit = req.body.unit;
+    var image = req.body.image;
+    var image_data = req.body.image_data;
+    
+    if (!name || !price) {
+        return res.status(400).json({ success: false, message: 'Nomi va narxi kiritilishi shart' });
+    }
+
+    var imageToSave = image_data || image || '';
+
+    db.run(
+        `INSERT INTO products (name, code, price, cost_price, quantity, unit, image) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [name, code || '', parseFloat(price) || 0, parseFloat(cost_price) || 0, parseFloat(quantity) || 0, unit || 'dona', imageToSave],
+        function(err) {
+            if (err) {
+                console.error('Insert error:', err);
+                return res.status(500).json({ success: false, message: err.message });
+            }
+            db.get('SELECT * FROM products WHERE id = ?', [this.lastID], function(err, row) {
+                res.json({ success: true, data: row });
+            });
+        }
+    );
+});
+
+app.put('/api/products/:id', function(req, res) {
+    var id = req.params.id;
+    var name = req.body.name;
+    var code = req.body.code;
+    var price = req.body.price;
+    var cost_price = req.body.cost_price;
+    var quantity = req.body.quantity;
+    var unit = req.body.unit;
+    var image = req.body.image;
+
+    db.run(
+        `UPDATE products SET name=?, code=?, price=?, cost_price=?, quantity=?, unit=?, image=? WHERE id=?`,
+        [name, code, parseFloat(price) || 0, parseFloat(cost_price) || 0, parseFloat(quantity) || 0, unit, image, id],
+        function(err) {
+            if (err) {
+                console.error('Update error:', err);
+                return res.status(500).json({ success: false, message: err.message });
+            }
+            if (this.changes === 0) {
+                return res.status(404).json({ success: false, message: 'Mahsulot topilmadi' });
+            }
+            db.get('SELECT * FROM products WHERE id = ?', [id], function(err, row) {
+                res.json({ success: true, data: row });
+            });
+        }
+    );
+});
+
+app.delete('/api/products/:id', function(req, res) {
+    var id = req.params.id;
+    db.run('DELETE FROM products WHERE id = ?', [id], function(err) {
+        if (err) {
+            console.error('Delete error:', err);
+            return res.status(500).json({ success: false, message: err.message });
+        }
+        res.json({ success: true, message: 'Mahsulot o\'chirildi' });
+    });
+});
+
+// ============================================
+// API - SALES
+// ============================================
+app.post('/api/sales', function(req, res) {
+    console.log('📤 POST /api/sales');
+    var items = req.body.items;
+    var total = req.body.total;
+    var discount = req.body.discount;
+    var payment_type = req.body.payment_type;
+    var shift_id = req.body.shift_id;
+    var debtor = req.body.debtor;
+
+    if (!items || items.length === 0) {
+        return res.status(400).json({ success: false, message: 'Savatcha bo\'sh' });
+    }
+
+    var saleIds = [];
+
+    db.serialize(function() {
+        var stmt = db.prepare(
+            `INSERT INTO sales (product_id, quantity, price, total_price, discount, payment_type, shift_id) 
+             VALUES (?, ?, ?, ?, ?, ?, ?)`
+        );
+
+        items.forEach(function(item) {
+            var itemTotal = (item.price || 0) * (item.quantity || 0);
+            stmt.run([item.product_id, item.quantity || 0, item.price || 0, itemTotal, discount || 0, payment_type || 'cash', shift_id || null], function(err) {
+                if (!err) saleIds.push(this.lastID);
+            });
+            
+            db.run(
+                'UPDATE products SET quantity = quantity - ?, sales_count = sales_count + 1 WHERE id = ?',
+                [item.quantity || 0, item.product_id]
+            );
+        });
+
+        stmt.finalize(function(err) {
+            if (err) {
+                console.error('Sale error:', err);
+                return res.status(500).json({ success: false, message: err.message });
+            }
+
+            if (payment_type === 'credit' && debtor) {
+                db.run(
+                    `INSERT INTO debtors (name, phone, address, amount, sale_id, is_paid) 
+                     VALUES (?, ?, ?, ?, ?, 0)`,
+                    [debtor.name, debtor.phone || '', debtor.address || '', total || 0, saleIds[0] || null],
+                    function(err) {
+                        if (err) console.error('Debtor save error:', err);
+                    }
+                );
+            }
+
+            res.json({ success: true, message: 'Savdo qabul qilindi', data: { saleIds: saleIds } });
+        });
+    });
+});
+
+// 🔥 SALES DAILY - SHIFT_ID FILTER QO'SHILDI
+app.get('/api/sales/daily', function(req, res) {
+    var date = req.query.date;
+    var shiftId = req.query.shift_id;
+    var queryDate = date || new Date().toISOString().split('T')[0];
+    console.log('📤 GET /api/sales/daily?date=' + queryDate + '&shift_id=' + shiftId);
+
+    var sql = `
+        SELECT s.*, p.name as product_name 
+        FROM sales s
+        LEFT JOIN products p ON s.product_id = p.id
+        WHERE DATE(s.sale_date) = ?
+    `;
+    var params = [queryDate];
+    
+    if (shiftId) {
+        sql += ' AND s.shift_id = ?';
+        params.push(shiftId);
+    }
+    
+    sql += ' ORDER BY s.sale_date DESC';
+    
+    db.all(sql, params, function(err, rows) {
+        if (err) {
+            console.error('Daily sales error:', err);
+            return res.status(500).json({ success: false, message: err.message, data: [] });
+        }
+        res.json({ success: true, data: rows || [] });
+    });
+});
+
+// 🔥 SALES MONTHLY - BARCHA SAVDOLAR (yopilgan + ochiq)
+app.get('/api/sales/monthly', function(req, res) {
+    var year = req.query.year;
+    var month = req.query.month;
+    var now = new Date();
+    var y = year || now.getFullYear();
+    var m = month || (now.getMonth() + 1);
+    var monthStr = String(m).padStart(2, '0');
+    console.log('📤 GET /api/sales/monthly?year=' + y + '&month=' + m);
+
+    db.all(`
+        SELECT s.*, p.name as product_name 
+        FROM sales s
+        LEFT JOIN products p ON s.product_id = p.id
+        WHERE strftime('%Y', s.sale_date) = ? AND strftime('%m', s.sale_date) = ?
+        ORDER BY s.sale_date DESC
+    `, [String(y), monthStr], function(err, rows) {
+        if (err) {
+            console.error('Monthly sales error:', err);
+            return res.status(500).json({ success: false, message: err.message, data: [] });
+        }
+        res.json({ success: true, data: rows || [] });
+    });
+});
+
+// ============================================
+// 🔥 API - SHIFTS (TO'LIQ TUZATILGAN)
+// ============================================
+
+app.post('/api/shifts/open', function(req, res) {
+    console.log('📤 POST /api/shifts/open');
+    var openingBalance = req.body.openingBalance;
+
+    db.run(
+        'INSERT INTO shifts (opening_balance, is_active) VALUES (?, 1)',
+        [parseFloat(openingBalance) || 0],
+        function(err) {
+            if (err) {
+                console.error('Open shift error:', err);
+                return res.status(500).json({ success: false, message: err.message });
+            }
+            db.get('SELECT * FROM shifts WHERE id = ?', [this.lastID], function(err, row) {
+                res.json({ success: true, data: row });
+            });
+        }
+    );
+});
+
+// 🔥 Smena yopish - savdolarni hisobotga saqlash va tozalash
+app.post('/api/shifts/close', function(req, res) {
+    console.log('📤 POST /api/shifts/close');
+    var closingBalance = req.body.closingBalance;
+    
+    // Joriy smenani olish
+    db.get('SELECT * FROM shifts WHERE is_active = 1 ORDER BY id DESC LIMIT 1', function(err, shift) {
+        if (err) {
+            console.error('Get shift error:', err);
+            return res.status(500).json({ success: false, message: err.message });
+        }
+        if (!shift) {
+            return res.status(404).json({ success: false, message: 'Aktiv smena topilmadi' });
+        }
+        
+        // 🔥 SAVDOLARNI HISOBI (faqat shu smenaga tegishli)
+        db.get(`
+            SELECT 
+                COUNT(*) as total_sales,
+                COALESCE(SUM(total_price), 0) as total_amount,
+                COALESCE(SUM(CASE WHEN payment_type = 'cash' THEN total_price ELSE 0 END), 0) as cash_amount,
+                COALESCE(SUM(CASE WHEN payment_type = 'terminal' THEN total_price ELSE 0 END), 0) as terminal_amount,
+                COALESCE(SUM(CASE WHEN payment_type = 'credit' THEN total_price ELSE 0 END), 0) as credit_amount,
+                GROUP_CONCAT(DISTINCT DATE(sale_date)) as sale_dates
+            FROM sales
+            WHERE shift_id = ?
+        `, [shift.id], function(err, report) {
+            if (err) {
+                console.error('Report error:', err);
+                return res.status(500).json({ success: false, message: err.message });
+            }
+            
+            // 🔥 SMENANI YOPISH VA HISOBOTNI SAQLASH
+            db.run(
+                `UPDATE shifts SET 
+                    closing_balance = ?, 
+                    closed_at = CURRENT_TIMESTAMP, 
+                    is_active = 0,
+                    total_sales = ?,
+                    total_amount = ?,
+                    cash_amount = ?,
+                    terminal_amount = ?,
+                    credit_amount = ?,
+                    sale_dates = ?
+                WHERE id = ?`,
+                [
+                    parseFloat(closingBalance) || 0,
+                    report.total_sales || 0,
+                    report.total_amount || 0,
+                    report.cash_amount || 0,
+                    report.terminal_amount || 0,
+                    report.credit_amount || 0,
+                    report.sale_dates || '',
+                    shift.id
+                ],
+                function(err) {
+                    if (err) {
+                        console.error('Close shift error:', err);
+                        return res.status(500).json({ success: false, message: err.message });
+                    }
+                    
+                    // 🔥🔥🔥 SAVDO JADVALINI TOZALASH (kunlik savdo 0 bo'ladi)
+                    db.run('DELETE FROM sales WHERE shift_id = ?', [shift.id], function(err) {
+                        if (err) {
+                            console.error('Clear sales error:', err);
+                        } else {
+                            console.log('✅ Sales cleared for shift:', shift.id);
+                        }
+                    });
+                    
+                    res.json({ 
+                        success: true, 
+                        message: 'Smena yopildi! Savdo hisobotga saqlandi.',
+                        data: {
+                            shift_id: shift.id,
+                            report: report,
+                            sales_cleared: true
+                        }
+                    });
+                }
+            );
+        });
+    });
+});
+
+app.get('/api/shifts/current', function(req, res) {
+    console.log('📤 GET /api/shifts/current');
+    db.get('SELECT * FROM shifts WHERE is_active = 1 ORDER BY id DESC LIMIT 1', function(err, row) {
+        if (err) {
+            console.error('Current shift error:', err);
+            return res.status(500).json({ success: false, message: err.message, data: null });
+        }
+        res.json({ success: true, data: row || null });
+    });
+});
+
+// 🔥 Smena tarixi - yopilgan smenalar hisobotini olish
+app.get('/api/shifts/history', function(req, res) {
+    console.log('📤 GET /api/shifts/history');
+    db.all(`
+        SELECT 
+            id,
+            opening_balance,
+            closing_balance,
+            opened_at,
+            closed_at,
+            is_active,
+            total_sales,
+            total_amount,
+            cash_amount,
+            terminal_amount,
+            credit_amount,
+            sale_dates,
+            CASE 
+                WHEN is_active = 1 THEN '🟢 Ochilgan'
+                ELSE '🔴 Yopilgan'
+            END as status_text
+        FROM shifts 
+        ORDER BY id DESC
+    `, function(err, rows) {
+        if (err) {
+            console.error('Shift history error:', err);
+            return res.status(500).json({ success: false, message: err.message, data: [] });
+        }
+        res.json({ success: true, data: rows || [] });
+    });
+});
+
+// ============================================
+// API - DEBTORS
+// ============================================
+app.get('/api/debtors', function(req, res) {
+    console.log('📤 GET /api/debtors');
+    db.all('SELECT * FROM debtors WHERE is_paid = 0 ORDER BY created_at DESC', function(err, rows) {
+        if (err) {
+            console.error('Debtors error:', err);
+            return res.status(500).json({ success: false, message: err.message, data: [] });
+        }
+        res.json({ success: true, data: rows || [] });
+    });
+});
+
+app.post('/api/debtors/:id/pay', function(req, res) {
+    var id = req.params.id;
+    var amount = req.body.amount;
+    console.log('📤 POST /api/debtors/' + id + '/pay');
+
+    db.get('SELECT * FROM debtors WHERE id = ?', [id], function(err, debtor) {
+        if (err) {
+            console.error('Debtor get error:', err);
+            return res.status(500).json({ success: false, message: err.message });
+        }
+        if (!debtor) {
+            return res.status(404).json({ success: false, message: 'Qarzdor topilmadi' });
+        }
+
+        var newAmount = Math.max(0, (debtor.amount || 0) - (parseFloat(amount) || 0));
+        var isPaid = newAmount <= 0 ? 1 : 0;
+
+        db.run(
+            'UPDATE debtors SET amount = ?, is_paid = ?, paid_at = CURRENT_TIMESTAMP WHERE id = ?',
+            [newAmount, isPaid, id],
+            function(err) {
+                if (err) {
+                    console.error('Pay debt error:', err);
+                    return res.status(500).json({ success: false, message: err.message });
+                }
+                res.json({ success: true, message: 'Qarz to\'landi', data: { remaining: newAmount } });
+            }
+        );
+    });
+});
+
+// ============================================
+// API - REPORTS
+// ============================================
+app.get('/api/reports/daily', function(req, res) {
+    var date = req.query.date;
+    var queryDate = date || new Date().toISOString().split('T')[0];
+    console.log('📤 GET /api/reports/daily?date=' + queryDate);
+
+    db.get(`
+        SELECT 
+            COUNT(*) as total_sales,
+            COALESCE(SUM(total_price), 0) as total_amount,
+            COALESCE(SUM(CASE WHEN payment_type = 'cash' THEN total_price ELSE 0 END), 0) as cash_amount,
+            COALESCE(SUM(CASE WHEN payment_type = 'terminal' THEN total_price ELSE 0 END), 0) as terminal_amount,
+            COALESCE(SUM(CASE WHEN payment_type = 'credit' THEN total_price ELSE 0 END), 0) as credit_amount
+        FROM sales
+        WHERE DATE(sale_date) = ?
+    `, [queryDate], function(err, row) {
+        if (err) {
+            console.error('Report error:', err);
+            return res.status(500).json({ success: false, message: err.message, data: {} });
+        }
+        res.json({ success: true, data: row || { total_sales: 0, total_amount: 0 } });
+    });
+});
+
+// ============================================
+// API - EMPLOYEES
+// ============================================
+app.get('/api/employees', function(req, res) {
+    console.log('📤 GET /api/employees');
+    db.all('SELECT id, name, email, position, phone FROM employees ORDER BY id DESC', function(err, rows) {
+        if (err) {
+            console.error('Employees error:', err);
+            return res.status(500).json({ success: false, message: err.message, data: [] });
+        }
+        res.json({ success: true, data: rows || [] });
+    });
+});
+
+app.post('/api/employees', function(req, res) {
+    console.log('📤 POST /api/employees');
+    var name = req.body.name;
+    var email = req.body.email;
+    var password = req.body.password;
+    var position = req.body.position;
+    var phone = req.body.phone;
+    
+    if (!name || !email) {
+        return res.status(400).json({ success: false, message: 'Ism va email kiritilishi shart' });
+    }
+
+    db.run(
+        'INSERT INTO employees (name, email, password, position, phone) VALUES (?, ?, ?, ?, ?)',
+        [name, email, password || '123456', position || '', phone || ''],
+        function(err) {
+            if (err) {
+                console.error('Add employee error:', err);
+                return res.status(500).json({ success: false, message: err.message });
+            }
+            db.get('SELECT id, name, email, position, phone FROM employees WHERE id = ?', [this.lastID], function(err, row) {
+                res.json({ success: true, data: row });
+            });
+        }
+    );
+});
+
+app.delete('/api/employees/:id', function(req, res) {
+    var id = req.params.id;
+    console.log('📤 DELETE /api/employees/' + id);
+    db.run('DELETE FROM employees WHERE id = ?', [id], function(err) {
+        if (err) {
+            console.error('Delete employee error:', err);
+            return res.status(500).json({ success: false, message: err.message });
+        }
+        res.json({ success: true, message: 'Xodim o\'chirildi' });
+    });
+});
+
+// ============================================
+// 🔥 API - RETURNS (QAYTARISH)
+// ============================================
+
+// POST /api/returns - Mahsulotni qaytarib olish (omborga qaytaradi)
+app.post('/api/returns', function(req, res) {
+    console.log('📤 POST /api/returns');
+    var sale_id = req.body.sale_id;
+    var product_id = req.body.product_id;
+    var quantity = req.body.quantity;
+    var price = req.body.price;
+    var total_price = req.body.total_price;
+    var reason = req.body.reason;
+    var returned_by = req.body.returned_by;
+    
+    if (!product_id || !quantity) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Mahsulot ID va miqdor kiritilishi shart' 
+        });
+    }
+    
+    // Mahsulotni tekshirish
+    db.get('SELECT * FROM products WHERE id = ?', [product_id], function(err, product) {
+        if (err) {
+            console.error('Product check error:', err);
+            return res.status(500).json({ success: false, message: err.message });
+        }
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Mahsulot topilmadi' });
+        }
+        
+        // MAHSULOTNI OMBORGA QAYTARISH
+        var newQuantity = (product.quantity || 0) + parseFloat(quantity);
+        
+        db.run(
+            `INSERT INTO returns (sale_id, product_id, quantity, price, total_price, reason, returned_by) 
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+                sale_id || null, 
+                product_id, 
+                parseFloat(quantity), 
+                parseFloat(price) || parseFloat(product.price), 
+                parseFloat(total_price) || (parseFloat(price) || parseFloat(product.price)) * parseFloat(quantity), 
+                reason || 'Boshqa', 
+                returned_by || 'Admin'
+            ],
+            function(err) {
+                if (err) {
+                    console.error('Return insert error:', err);
+                    return res.status(500).json({ success: false, message: err.message });
+                }
+                
+                db.run(
+                    'UPDATE products SET quantity = ? WHERE id = ?',
+                    [newQuantity, product_id],
+                    function(err) {
+                        if (err) {
+                            console.error('Update quantity error:', err);
+                            return res.status(500).json({ success: false, message: err.message });
+                        }
+                        
+                        console.log('✅ Mahsulot qaytarildi! Yangi miqdor:', newQuantity);
+                        
+                        db.get('SELECT * FROM returns WHERE id = ?', [this.lastID], function(err, row) {
+                            res.json({ 
+                                success: true, 
+                                message: 'Mahsulot qaytarib olindi va omborga qo\'shildi!',
+                                data: {
+                                    return: row,
+                                    product: {
+                                        id: product_id,
+                                        name: product.name,
+                                        old_quantity: product.quantity,
+                                        new_quantity: newQuantity
+                                    }
+                                }
+                            });
+                        });
+                    }
+                );
+            }
+        );
+    });
+});
+
+// GET /api/returns - Qaytarishlar ro'yxati (kunlik)
+app.get('/api/returns', function(req, res) {
+    var date = req.query.date;
+    var queryDate = date || new Date().toISOString().split('T')[0];
+    console.log('📤 GET /api/returns?date=' + queryDate);
+    
+    db.all(`
+        SELECT r.*, p.name as product_name, s.sale_date as original_sale_date
+        FROM returns r
+        LEFT JOIN products p ON r.product_id = p.id
+        LEFT JOIN sales s ON r.sale_id = s.id
+        WHERE DATE(r.return_date) = ?
+        ORDER BY r.return_date DESC
+    `, [queryDate], function(err, rows) {
+        if (err) {
+            console.error('Get returns error:', err);
+            return res.status(500).json({ success: false, message: err.message, data: [] });
+        }
+        res.json({ success: true, data: rows || [] });
+    });
+});
+
+// GET /api/returns/all - Barcha qaytarishlar
+app.get('/api/returns/all', function(req, res) {
+    console.log('📤 GET /api/returns/all');
+    db.all(`
+        SELECT r.*, p.name as product_name, s.sale_date as original_sale_date
+        FROM returns r
+        LEFT JOIN products p ON r.product_id = p.id
+        LEFT JOIN sales s ON r.sale_id = s.id
+        ORDER BY r.return_date DESC
+        LIMIT 100
+    `, function(err, rows) {
+        if (err) {
+            console.error('Get all returns error:', err);
+            return res.status(500).json({ success: false, message: err.message, data: [] });
+        }
+        res.json({ success: true, data: rows || [] });
+    });
+});
+
+// ============================================
+// FRONTEND
+// ============================================
+app.get('*', function(req, res) {
+    res.sendFile(path.join(__dirname, '../client/index.html'));
+});
+
+// ============================================
+// START SERVER
+// ============================================
+app.listen(PORT, function() {
+    console.log('='.repeat(50));
+    console.log('🚀 POP-AGRO-PRODUCT SERVER');
+    console.log('='.repeat(50));
+    console.log('✅ Server: http://localhost:' + PORT);
+    console.log('📊 API: http://localhost:' + PORT + '/api/products');
+    console.log('🔄 Returns: http://localhost:' + PORT + '/api/returns');
+    console.log('📋 Shifts: http://localhost:' + PORT + '/api/shifts/history');
+    console.log('🌐 Frontend: http://localhost:' + PORT);
+    console.log('='.repeat(50));
+});
+
+// Xatoliklarni ushlash
+process.on('uncaughtException', function(err) {
+    console.error('❌ Uncaught Exception:', err.message);
+});
+
+process.on('unhandledRejection', function(err) {
+    console.error('❌ Unhandled Rejection:', err);
+});
