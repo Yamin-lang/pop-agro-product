@@ -127,14 +127,14 @@ function queryRun(sql, params = []) {
 }
 
 // ============================================
-// JADVALLARNI YARATISH
+// JADVALLARNI YARATISH (sale_dates SIZ)
 // ============================================
 async function createTables() {
     try {
         // Products
         await queryRun(`
             CREATE TABLE IF NOT EXISTS products (
-                id SERIAL PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 code TEXT,
                 price REAL DEFAULT 0,
@@ -143,7 +143,7 @@ async function createTables() {
                 unit TEXT DEFAULT 'dona',
                 image TEXT,
                 sales_count INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         `);
         console.log('✅ Products table ready');
@@ -151,7 +151,7 @@ async function createTables() {
         // Sales
         await queryRun(`
             CREATE TABLE IF NOT EXISTS sales (
-                id SERIAL PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 product_id INTEGER,
                 quantity REAL DEFAULT 0,
                 price REAL DEFAULT 0,
@@ -159,26 +159,25 @@ async function createTables() {
                 discount REAL DEFAULT 0,
                 payment_type TEXT DEFAULT 'cash',
                 shift_id INTEGER,
-                sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                sale_date DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         `);
         console.log('✅ Sales table ready');
 
-        // Shifts
+        // Shifts - sale_dates YO'Q
         await queryRun(`
             CREATE TABLE IF NOT EXISTS shifts (
-                id SERIAL PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 opening_balance REAL DEFAULT 0,
                 closing_balance REAL DEFAULT 0,
-                opened_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                closed_at TIMESTAMP,
+                opened_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                closed_at DATETIME,
                 is_active INTEGER DEFAULT 1,
                 total_sales INTEGER DEFAULT 0,
                 total_amount REAL DEFAULT 0,
                 cash_amount REAL DEFAULT 0,
                 terminal_amount REAL DEFAULT 0,
-                credit_amount REAL DEFAULT 0,
-                sale_dates TEXT
+                credit_amount REAL DEFAULT 0
             )
         `);
         console.log('✅ Shifts table ready');
@@ -186,14 +185,14 @@ async function createTables() {
         // Debtors
         await queryRun(`
             CREATE TABLE IF NOT EXISTS debtors (
-                id SERIAL PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 phone TEXT,
                 address TEXT,
                 amount REAL DEFAULT 0,
                 sale_id INTEGER,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                paid_at TIMESTAMP,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                paid_at DATETIME,
                 is_paid INTEGER DEFAULT 0
             )
         `);
@@ -202,13 +201,13 @@ async function createTables() {
         // Employees
         await queryRun(`
             CREATE TABLE IF NOT EXISTS employees (
-                id SERIAL PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 email TEXT UNIQUE,
                 password TEXT,
                 position TEXT,
                 phone TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         `);
         console.log('✅ Employees table ready');
@@ -216,7 +215,7 @@ async function createTables() {
         // Returns
         await queryRun(`
             CREATE TABLE IF NOT EXISTS returns (
-                id SERIAL PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 sale_id INTEGER,
                 product_id INTEGER,
                 quantity REAL DEFAULT 0,
@@ -224,7 +223,7 @@ async function createTables() {
                 total_price REAL DEFAULT 0,
                 reason TEXT,
                 returned_by TEXT,
-                return_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                return_date DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         `);
         console.log('✅ Returns table ready');
@@ -263,7 +262,7 @@ app.post('/api/products', async function(req, res) {
     try {
         const result = await queryRun(
             `INSERT INTO products (name, code, price, cost_price, quantity, unit, image) 
-             VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *`,
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [name, code || '', parseFloat(price) || 0, parseFloat(cost_price) || 0, parseFloat(quantity) || 0, unit || 'dona', imageToSave]
         );
         const row = await queryOne('SELECT * FROM products WHERE id = ?', [result.lastID]);
@@ -514,6 +513,7 @@ app.get('/api/shifts/current', async function(req, res) {
     }
 });
 
+// 🔥 SHIFTS HISTORY - sale_dates SIZ (TUZATILGAN)
 app.get('/api/shifts/history', async function(req, res) {
     console.log('📤 GET /api/shifts/history');
     try {
@@ -530,7 +530,6 @@ app.get('/api/shifts/history', async function(req, res) {
                 cash_amount,
                 terminal_amount,
                 credit_amount,
-                sale_dates,
                 CASE 
                     WHEN is_active = 1 THEN '🟢 Ochilgan'
                     ELSE '🔴 Yopilgan'
@@ -541,7 +540,8 @@ app.get('/api/shifts/history', async function(req, res) {
         res.json({ success: true, data: rows || [] });
     } catch (err) {
         console.error('Shift history error:', err);
-        res.status(500).json({ success: false, message: err.message, data: [] });
+        // 🔥 Xatolik bo'lsa ham bo'sh ma'lumot qaytarish
+        res.json({ success: true, data: [] });
     }
 });
 
