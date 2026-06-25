@@ -8,6 +8,11 @@ var currentShift = null;
 var selectedPrinter = 'XP-80C';
 var paymentType = 'cash';
 
+// 🔥 DO'KON MA'LUMOTLARI (CHEKDA CHIQADI)
+var SHOP_NAME = '🌾 POP AGRO PRODUCT';
+var SHOP_PHONE = '📞 +998 97 254 7377';
+var SHOP_ADDRESS = '📍 Namangan viloyati, Pop tumani';
+
 // ============================================
 // LOAD POS
 // ============================================
@@ -172,13 +177,15 @@ function testPrinter() {
     var printer = document.getElementById('printerSelect') ? document.getElementById('printerSelect').value : 'XP-80C';
     showToast('🖨️ Printer test yuborilmoqda...', 'info');
     
-    var testText = '═'.repeat(32) + '\n';
-    testText += '     🌾 POP AGRO PRODUCT\n';
-    testText += '     PRINTER TEST\n';
-    testText += '     ' + new Date().toLocaleString() + '\n';
-    testText += '═'.repeat(32) + '\n';
+    var testText = '═'.repeat(36) + '\n';
+    testText += '       ' + SHOP_NAME + '\n';
+    testText += '       ' + SHOP_PHONE + '\n';
+    testText += '       ' + SHOP_ADDRESS + '\n';
+    testText += '       PRINTER TEST\n';
+    testText += '       ' + new Date().toLocaleString() + '\n';
+    testText += '═'.repeat(36) + '\n';
     testText += '  ✅ Printer ishlayapti!\n';
-    testText += '═'.repeat(32) + '\n';
+    testText += '═'.repeat(36) + '\n';
     
     updatePreview(testText);
     printViaWindows(testText, 'Printer Test');
@@ -189,12 +196,25 @@ function testPrinter() {
 }
 
 // ============================================
-// REAL PRINTER - WINDOWS PRINTER PANELI
+// 🔥 REAL PRINTER - CHEKDA DO'KON MA'LUMOTLARI BILAN
 // ============================================
 function printReceipt() {
     if (cart.length === 0) {
         showToast('Savatcha bo\'sh!', 'error');
         return;
+    }
+    
+    // MIJOZ MA'LUMOTLARINI OLISH (faqat nasiya uchun)
+    var customerName = '';
+    var customerPhone = '';
+    var paymentTypeText = paymentType || 'cash';
+    
+    // FAQAT NASIYA BO'LSA TELEFON RAQAM OLINADI
+    if (paymentTypeText === 'credit') {
+        var nameInput = document.getElementById('debtorName');
+        var phoneInput = document.getElementById('debtorPhone');
+        customerName = nameInput ? nameInput.value.trim() : '';
+        customerPhone = phoneInput ? phoneInput.value.trim() : '';
     }
     
     var printer = document.getElementById('printerSelect') ? document.getElementById('printerSelect').value : 'XP-80C';
@@ -203,32 +223,60 @@ function printReceipt() {
     var discount = parseFloat(discountInput ? discountInput.value : 0) || 0;
     var total = Math.max(0, subtotal - discount);
     
-    // Chek matnini tayyorlash
+    // 🔥 CHEK MATNI - DO'KON MA'LUMOTLARI DOIM CHIQADI
     var receipt = '';
-    receipt += '═'.repeat(32) + '\n';
-    receipt += '        🌾 POP AGRO PRODUCT\n';
-    receipt += '        ' + new Date().toLocaleString() + '\n';
-    receipt += '═'.repeat(32) + '\n';
-    receipt += '  Mahsulot     Soni  Narxi\n';
-    receipt += '─'.repeat(32) + '\n';
+    receipt += '═'.repeat(36) + '\n';
+    receipt += '       ' + SHOP_NAME + '\n';
+    receipt += '       ' + SHOP_PHONE + '\n';
+    receipt += '       ' + SHOP_ADDRESS + '\n';
+    receipt += '       ' + new Date().toLocaleString() + '\n';
+    receipt += '═'.repeat(36) + '\n';
+    
+    // FAQAT NASIYA BO'LSA MIJOZ MA'LUMOTLARI CHIQADI
+    if (paymentTypeText === 'credit' && customerName) {
+        receipt += '  Mijoz: ' + customerName + '\n';
+        if (customerPhone) {
+            receipt += '  📞 Tel: ' + customerPhone + '\n';
+        }
+        receipt += '─'.repeat(36) + '\n';
+    }
+    
+    receipt += '  Mahsulot       Soni  Narxi\n';
+    receipt += '─'.repeat(36) + '\n';
     
     cart.forEach(function(c) {
-        var name = (c.name || 'N/A').substring(0, 15);
+        var name = (c.name || 'N/A').substring(0, 18);
         var qty = String(c.quantity || 0).padStart(4);
         var price = ((c.price || 0) * (c.quantity || 0)).toLocaleString();
-        receipt += '  ' + name.padEnd(12) + ' ' + qty + '  ' + price.padStart(10) + " so'm\n";
+        receipt += '  ' + name.padEnd(14) + ' ' + qty + '  ' + price.padStart(10) + " so'm\n";
     });
     
-    receipt += '─'.repeat(32) + '\n';
-    receipt += '  Jami:              ' + subtotal.toLocaleString() + " so'm\n";
+    receipt += '─'.repeat(36) + '\n';
+    receipt += '  Jami:                ' + subtotal.toLocaleString() + " so'm\n";
     if (discount > 0) {
-        receipt += '  Chegirma:          -' + discount.toLocaleString() + " so'm\n";
+        receipt += '  Chegirma:            -' + discount.toLocaleString() + " so'm\n";
     }
-    receipt += '─'.repeat(32) + '\n';
-    receipt += '  UMUMIY:            ' + total.toLocaleString() + " so'm\n";
-    receipt += '═'.repeat(32) + '\n';
+    receipt += '─'.repeat(36) + '\n';
+    receipt += '  UMUMIY:              ' + total.toLocaleString() + " so'm\n";
+    
+    // TO'LOV TURI
+    var paymentLabel = paymentTypeText === 'cash' ? 'Naqd' : 
+                       paymentTypeText === 'terminal' ? 'Terminal' : 
+                       paymentTypeText === 'credit' ? 'Nasiya' : paymentTypeText;
+    receipt += '  To\'lov:              ' + paymentLabel + '\n';
+    
+    receipt += '═'.repeat(36) + '\n';
     receipt += '  Rahmat! Xush kelibsiz!\n';
-    receipt += '═'.repeat(32) + '\n';
+    
+    // DO'KON TELEFON RAQAMI DOIM CHIQADI
+    receipt += '  ' + SHOP_PHONE + '\n';
+    
+    // FAQAT NASIYA BO'LSA MIJOZ TELEFON RAQAMI HAM CHIQADI
+    if (paymentTypeText === 'credit' && customerPhone) {
+        receipt += '  Mijoz Tel: ' + customerPhone + '\n';
+    }
+    
+    receipt += '═'.repeat(36) + '\n';
     
     // Oldindan ko'rish
     updatePreview(receipt);
@@ -238,43 +286,43 @@ function printReceipt() {
 }
 
 // ============================================
-// WINDOWS PRINTER DIALOG ORQALI CHOP ETISH
+// WINDOWS PRINTER DIALOG ORQALI CHOP ETISH (SHRIFTLAR KATTAROQ)
 // ============================================
 function printViaWindows(text, title) {
     title = title || 'Pop Agro - Chop etish';
     
     // Chop etish uchun yangi oyna ochish
-    var printWindow = window.open('', '_blank', 'width=500,height=700,scrollbars=yes');
+    var printWindow = window.open('', '_blank', 'width=550,height=750,scrollbars=yes');
     if (!printWindow) {
         showToast('❌ Chop etish oynasi ochilmadi! Pop-up bloklangan.', 'error');
         return;
     }
     
-    // Chop etish oynasiga kontent yozish
+    // Chop etish oynasiga kontent yozish (SHRIFTLAR KATTAROQ)
     printWindow.document.write('<!DOCTYPE html>');
     printWindow.document.write('<html><head><title>' + title + '</title>');
     printWindow.document.write('<meta charset="UTF-8">');
     printWindow.document.write('<style>');
     printWindow.document.write('* { margin: 0; padding: 0; box-sizing: border-box; }');
     printWindow.document.write('body { font-family: "Courier New", monospace; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }');
-    printWindow.document.write('.receipt-wrapper { background: white; max-width: 380px; width: 100%; padding: 30px; border-radius: 12px; box-shadow: 0 8px 40px rgba(0,0,0,0.15); }');
-    printWindow.document.write('.receipt-wrapper .receipt-title { text-align: center; font-size: 18px; font-weight: 700; margin-bottom: 15px; color: #1a1a2e; }');
+    printWindow.document.write('.receipt-wrapper { background: white; max-width: 420px; width: 100%; padding: 35px; border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,0.15); }');
+    printWindow.document.write('.receipt-wrapper .receipt-title { text-align: center; font-size: 22px; font-weight: 700; margin-bottom: 15px; color: #1a1a2e; }');
     printWindow.document.write('.receipt-wrapper .receipt-title span { color: #f59e0b; }');
-    printWindow.document.write('.receipt-wrapper pre { font-size: 14px; white-space: pre-wrap; font-family: "Courier New", monospace; line-height: 1.6; background: #fafafa; padding: 15px; border-radius: 8px; border: 1px solid #e8ecf1; }');
+    printWindow.document.write('.receipt-wrapper pre { font-size: 17px; white-space: pre-wrap; font-family: "Courier New", monospace; line-height: 1.8; background: #fafafa; padding: 18px; border-radius: 8px; border: 1px solid #e8ecf1; }');
     printWindow.document.write('.btn-group { display: flex; gap: 12px; margin-top: 20px; justify-content: center; flex-wrap: wrap; }');
-    printWindow.document.write('.btn-group button { padding: 12px 30px; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; font-weight: 600; transition: all 0.3s; }');
+    printWindow.document.write('.btn-group button { padding: 14px 35px; border: none; border-radius: 8px; font-size: 17px; cursor: pointer; font-weight: 600; transition: all 0.3s; }');
     printWindow.document.write('.btn-group .btn-print { background: linear-gradient(135deg, #22c55e, #16a34a); color: white; }');
     printWindow.document.write('.btn-group .btn-print:hover { transform: scale(1.03); box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4); }');
     printWindow.document.write('.btn-group .btn-close { background: #ef4444; color: white; }');
     printWindow.document.write('.btn-group .btn-close:hover { transform: scale(1.03); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); }');
-    printWindow.document.write('.printer-info { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 12px; }');
+    printWindow.document.write('.printer-info { text-align: center; font-size: 14px; color: #94a3b8; margin-top: 12px; }');
     printWindow.document.write('.printer-info i { margin-right: 5px; }');
     printWindow.document.write('@media print {');
     printWindow.document.write('  body { background: white; padding: 0; min-height: auto; }');
     printWindow.document.write('  .receipt-wrapper { box-shadow: none; border-radius: 0; padding: 15px; max-width: 100%; }');
     printWindow.document.write('  .btn-group { display: none !important; }');
     printWindow.document.write('  .printer-info { display: none !important; }');
-    printWindow.document.write('  .receipt-wrapper pre { border: none; background: white; padding: 10px; }');
+    printWindow.document.write('  .receipt-wrapper pre { border: none; background: white; padding: 15px; font-size: 18px; }');
     printWindow.document.write('}');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
@@ -313,10 +361,13 @@ function printDailyReport() {
     API.getSales(today).then(function(data) {
         if (data.success) {
             var report = '';
-            report += '═'.repeat(32) + '\n';
+            report += '═'.repeat(36) + '\n';
             report += '    📊 KUNLIK HISOBOT\n';
+            report += '    ' + SHOP_NAME + '\n';
+            report += '    ' + SHOP_PHONE + '\n';
+            report += '    ' + SHOP_ADDRESS + '\n';
             report += '    ' + new Date().toLocaleString() + '\n';
-            report += '═'.repeat(32) + '\n';
+            report += '═'.repeat(36) + '\n';
             
             var cash = data.data.filter(function(s) { return s.payment_type === 'cash'; });
             var terminal = data.data.filter(function(s) { return s.payment_type === 'terminal'; });
@@ -331,9 +382,27 @@ function printDailyReport() {
             report += '  Naqd: ' + cashTotal.toLocaleString() + " so'm\n";
             report += '  Terminal: ' + terminalTotal.toLocaleString() + " so'm\n";
             report += '  Nasiya: ' + creditTotal.toLocaleString() + " so'm\n";
-            report += '─'.repeat(32) + '\n';
+            report += '─'.repeat(36) + '\n';
             report += '  JAMI: ' + totalAll.toLocaleString() + " so'm\n";
-            report += '═'.repeat(32) + '\n';
+            report += '═'.repeat(36) + '\n';
+            
+            // NASIYA QILGAN MIJOZLAR
+            if (credit.length > 0) {
+                report += '\n  📞 NASIYA MIJOZLAR:\n';
+                report += '─'.repeat(36) + '\n';
+                credit.forEach(function(s, i) {
+                    var debtorName = s.debtor_name || 'N/A';
+                    var debtorPhone = s.debtor_phone || '-';
+                    report += '  ' + (i + 1) + '. ' + debtorName + '\n';
+                    report += '     📞 Tel: ' + debtorPhone + '\n';
+                    report += '     Summa: ' + (s.total_price || 0).toLocaleString() + " so'm\n";
+                });
+                report += '═'.repeat(36) + '\n';
+            }
+            
+            // DO'KON TELEFON RAQAMI
+            report += '\n  ' + SHOP_PHONE + '\n';
+            report += '═'.repeat(36) + '\n';
             
             updatePreview(report);
             printViaWindows(report, 'Pop Agro - Kunlik Hisobot');
@@ -351,7 +420,7 @@ function updatePreview(text) {
     if (preview) preview.style.display = 'block';
     
     if (content) {
-        content.innerHTML = '<pre style="font-family: \'Courier New\', monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all; padding: 10px;">' + text + '</pre>';
+        content.innerHTML = '<pre style="font-family: \'Courier New\', monospace; font-size: 15px; white-space: pre-wrap; word-break: break-all; padding: 10px;">' + text + '</pre>';
     }
 }
 
@@ -372,6 +441,14 @@ function setPaymentType(type) {
     var creditForm = document.getElementById('creditForm');
     if (creditForm) {
         creditForm.style.display = type === 'credit' ? 'flex' : 'none';
+        
+        // 🔥 NASIYA FORMASI OCHILGANDA TELEFON RAQAMNI AVTOMAT QO'YISH
+        if (type === 'credit') {
+            var phoneInput = document.getElementById('debtorPhone');
+            if (phoneInput && !phoneInput.value) {
+                phoneInput.value = '+998972547377';
+            }
+        }
     }
 }
 
@@ -691,7 +768,7 @@ function openReturnModal() {
     `;
     document.body.appendChild(modal);
     
-    // 🔥 Kod bo'yicha qidirish - Enter bosilganda
+    // Kod bo'yicha qidirish - Enter bosilganda
     document.getElementById('returnProductCode').addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -706,7 +783,7 @@ function closeReturnModal() {
     if (modal) modal.remove();
 }
 
-// 🔥 Mahsulotni kod bo'yicha qidirish
+// Mahsulotni kod bo'yicha qidirish
 function searchProductByCode(code) {
     var resultDiv = document.getElementById('returnResult');
     
@@ -718,7 +795,6 @@ function searchProductByCode(code) {
     
     API.getProducts().then(function(data) {
         if (data.success && data.data) {
-            // Kod bo'yicha qidirish (katta-kichik harflarga bog'liq emas)
             var product = data.data.find(function(p) { 
                 return p.code && p.code.toLowerCase() === code.toLowerCase(); 
             });
@@ -759,7 +835,6 @@ function processReturn() {
         return;
     }
     
-    // Mahsulotni tekshirish
     API.getProducts().then(function(data) {
         if (data.success && data.data) {
             var product = data.data.find(function(p) { return p.id == productId; });
@@ -768,7 +843,6 @@ function processReturn() {
                 return;
             }
             
-            // Qaytarish ma'lumotlarini tayyorlash
             var returnData = {
                 product_id: parseInt(productId),
                 quantity: parseFloat(quantity),
@@ -779,14 +853,11 @@ function processReturn() {
                 sale_id: saleId ? parseInt(saleId) : null
             };
             
-            // Qaytarish so'rovini yuborish
             API.returnProduct(returnData).then(function(response) {
                 if (response.success) {
                     resultDiv.innerHTML = '<div class="alert alert-success">✅ ' + quantity + ' dona ' + product.name + ' qaytarib olindi!</div>';
-                    // Sahifani yangilash
                     loadPOSProducts();
                     updateCartUI();
-                    // Modalni yopish
                     setTimeout(function() {
                         closeReturnModal();
                     }, 2000);
