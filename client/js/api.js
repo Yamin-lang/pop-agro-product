@@ -1,22 +1,11 @@
 // ============================================
-// API.JS - SERVER BOG'LANISH (VERCEL UCHUN)
+// API.JS - SERVER BOG'LANISH (TUZATILGAN)
 // ============================================
 
 // ============================================
-// 🔥 AVTOMATIK BASE URL (Vercel yoki Local)
+// 🔥 API BASE - DOIMIY /api BILAN
 // ============================================
-var API_BASE = (function() {
-    // Agar Vercel da bo'lsa, production URL ni ishlat
-    if (window.location.hostname === 'pop-agro-product.vercel.app') {
-        return 'https://pop-agro-product.vercel.app/api';
-    }
-    // Agar localhost da bo'lsa
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'http://localhost:5000/api';
-    }
-    // Agar boshqa domain bo'lsa (masalan preview)
-    return window.location.origin + '/api';
-})();
+var API_BASE = window.location.origin + '/api';
 
 console.log('✅ API loaded, base:', API_BASE);
 
@@ -30,6 +19,9 @@ var API = {
         return fetch(API_BASE + '/products')
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
+                if (!r.ok) {
+                    throw new Error('HTTP ' + r.status);
+                }
                 return r.json();
             })
             .then(function(data) {
@@ -51,6 +43,9 @@ var API = {
         })
         .then(function(r) {
             console.log('📥 Response status:', r.status);
+            if (!r.ok) {
+                throw new Error('HTTP ' + r.status);
+            }
             return r.json();
         })
         .then(function(data) {
@@ -64,7 +59,7 @@ var API = {
     },
     
     updateProduct: function(id, data) {
-        console.log('📤 API.updateProduct called - ID:', id, 'Data:', data);
+        console.log('📤 API.updateProduct called - ID:', id);
         return fetch(API_BASE + '/products/' + id, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -72,6 +67,9 @@ var API = {
         })
         .then(function(r) {
             console.log('📥 Response status:', r.status);
+            if (!r.ok) {
+                throw new Error('HTTP ' + r.status);
+            }
             return r.json();
         })
         .then(function(data) {
@@ -91,6 +89,9 @@ var API = {
         })
         .then(function(r) {
             console.log('📥 Response status:', r.status);
+            if (!r.ok) {
+                throw new Error('HTTP ' + r.status);
+            }
             return r.json();
         })
         .then(function(data) {
@@ -105,7 +106,7 @@ var API = {
     
     // ==================== SALES ====================
     addSale: function(data) {
-        console.log('📤 API.addSale called with:', data);
+        console.log('📤 API.addSale called');
         return fetch(API_BASE + '/sales', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -113,6 +114,9 @@ var API = {
         })
         .then(function(r) {
             console.log('📥 Response status:', r.status);
+            if (!r.ok) {
+                throw new Error('HTTP ' + r.status);
+            }
             return r.json();
         })
         .then(function(data) {
@@ -131,14 +135,16 @@ var API = {
         if (shiftId) {
             url += '&shift_id=' + shiftId;
         }
-        console.log('📤 API.getSales called - url:', url);
+        console.log('📤 API.getSales - url:', url);
         return fetch(url)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
+                if (!r.ok) {
+                    throw new Error('HTTP ' + r.status);
+                }
                 return r.json();
             })
             .then(function(data) {
-                console.log('📥 Sales count:', data.data ? data.data.length : 0);
                 return data;
             })
             .catch(function(err) {
@@ -151,14 +157,16 @@ var API = {
         var now = new Date();
         var y = year || now.getFullYear();
         var m = month || (now.getMonth() + 1);
-        console.log('📤 API.getMonthlySales called - year:', y, 'month:', m);
+        console.log('📤 API.getMonthlySales - year:', y, 'month:', m);
         return fetch(API_BASE + '/sales/monthly?year=' + y + '&month=' + m)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
+                if (!r.ok) {
+                    throw new Error('HTTP ' + r.status);
+                }
                 return r.json();
             })
             .then(function(data) {
-                console.log('📥 Monthly sales count:', data.data ? data.data.length : 0);
                 return data;
             })
             .catch(function(err) {
@@ -169,7 +177,7 @@ var API = {
     
     // ==================== SHIFTS ====================
     openShift: function(balance) {
-        console.log('📤 API.openShift called - balance:', balance);
+        console.log('📤 API.openShift - balance:', balance);
         return fetch(API_BASE + '/shifts/open', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -177,10 +185,12 @@ var API = {
         })
         .then(function(r) {
             console.log('📥 Response status:', r.status);
+            if (!r.ok) {
+                throw new Error('HTTP ' + r.status);
+            }
             return r.json();
         })
         .then(function(data) {
-            console.log('📥 Open shift response:', data);
             return data;
         })
         .catch(function(err) {
@@ -190,7 +200,7 @@ var API = {
     },
     
     closeShift: function(balance) {
-        console.log('📤 API.closeShift called - balance:', balance);
+        console.log('📤 API.closeShift - balance:', balance);
         return fetch(API_BASE + '/shifts/close', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -198,10 +208,12 @@ var API = {
         })
         .then(function(r) {
             console.log('📥 Response status:', r.status);
+            if (!r.ok) {
+                throw new Error('HTTP ' + r.status);
+            }
             return r.json();
         })
         .then(function(data) {
-            console.log('📥 Close shift response:', data);
             return data;
         })
         .catch(function(err) {
@@ -215,10 +227,12 @@ var API = {
         return fetch(API_BASE + '/shifts/current')
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
+                if (!r.ok) {
+                    throw new Error('HTTP ' + r.status);
+                }
                 return r.json();
             })
             .then(function(data) {
-                console.log('📥 Current shift:', data);
                 return data;
             })
             .catch(function(err) {
@@ -232,10 +246,12 @@ var API = {
         return fetch(API_BASE + '/shifts/history')
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
+                if (!r.ok) {
+                    throw new Error('HTTP ' + r.status);
+                }
                 return r.json();
             })
             .then(function(data) {
-                console.log('📥 Shift history count:', data.data ? data.data.length : 0);
                 return data;
             })
             .catch(function(err) {
@@ -244,56 +260,19 @@ var API = {
             });
     },
     
-    // ==================== DEBTORS ====================
-    getDebtors: function() {
-        console.log('📤 API.getDebtors called');
-        return fetch(API_BASE + '/debtors')
-            .then(function(r) {
-                console.log('📥 Response status:', r.status);
-                return r.json();
-            })
-            .then(function(data) {
-                console.log('📥 Debtors count:', data.data ? data.data.length : 0);
-                return data;
-            })
-            .catch(function(err) {
-                console.error('❌ Get debtors error:', err);
-                return { success: false, message: err.message, data: [] };
-            });
-    },
-    
-    payDebt: function(id, amount) {
-        console.log('📤 API.payDebt called - ID:', id, 'Amount:', amount);
-        return fetch(API_BASE + '/debtors/' + id + '/pay', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amount: amount || 0 })
-        })
-        .then(function(r) {
-            console.log('📥 Response status:', r.status);
-            return r.json();
-        })
-        .then(function(data) {
-            console.log('📥 Pay debt response:', data);
-            return data;
-        })
-        .catch(function(err) {
-            console.error('❌ Pay debt error:', err);
-            return { success: false, message: err.message };
-        });
-    },
-    
     // ==================== REPORTS ====================
     getDailyReport: function(date) {
         var queryDate = date || new Date().toISOString().split('T')[0];
-        console.log('📤 API.getDailyReport called - date:', queryDate);
+        console.log('📤 API.getDailyReport - date:', queryDate);
         return fetch(API_BASE + '/reports/daily?date=' + queryDate)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
+                if (!r.ok) {
+                    throw new Error('HTTP ' + r.status);
+                }
                 return r.json();
             })
             .then(function(data) {
-                console.log('📥 Daily report:', data);
                 return data;
             })
             .catch(function(err) {
@@ -303,19 +282,20 @@ var API = {
     },
     
     // ==================== 📊 QO'SHIMCHA HISOBOTLAR ====================
-    
     getMonthlyReport: function(year, month) {
         var now = new Date();
         var y = year || now.getFullYear();
         var m = month || (now.getMonth() + 1);
-        console.log('📤 API.getMonthlyReport called - year:', y, 'month:', m);
+        console.log('📤 API.getMonthlyReport - year:', y, 'month:', m);
         return fetch(API_BASE + '/reports/monthly?year=' + y + '&month=' + m)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
+                if (!r.ok) {
+                    throw new Error('HTTP ' + r.status);
+                }
                 return r.json();
             })
             .then(function(data) {
-                console.log('📥 Monthly report:', data);
                 return data;
             })
             .catch(function(err) {
@@ -329,10 +309,12 @@ var API = {
         return fetch(API_BASE + '/reports/inventory')
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
+                if (!r.ok) {
+                    throw new Error('HTTP ' + r.status);
+                }
                 return r.json();
             })
             .then(function(data) {
-                console.log('📥 Inventory report:', data);
                 return data;
             })
             .catch(function(err) {
@@ -345,14 +327,16 @@ var API = {
         var now = new Date();
         var y = year || now.getFullYear();
         var m = month || (now.getMonth() + 1);
-        console.log('📤 API.getMonthlyProfit called - year:', y, 'month:', m);
+        console.log('📤 API.getMonthlyProfit - year:', y, 'month:', m);
         return fetch(API_BASE + '/reports/monthly-profit?year=' + y + '&month=' + m)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
+                if (!r.ok) {
+                    throw new Error('HTTP ' + r.status);
+                }
                 return r.json();
             })
             .then(function(data) {
-                console.log('📥 Monthly profit:', data);
                 return data;
             })
             .catch(function(err) {
@@ -366,10 +350,12 @@ var API = {
         return fetch(API_BASE + '/reports/all')
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
+                if (!r.ok) {
+                    throw new Error('HTTP ' + r.status);
+                }
                 return r.json();
             })
             .then(function(data) {
-                console.log('📥 All reports:', data);
                 return data;
             })
             .catch(function(err) {
@@ -378,126 +364,10 @@ var API = {
             });
     },
     
-    // ==================== EMPLOYEES ====================
-    getEmployees: function() {
-        console.log('📤 API.getEmployees called');
-        return fetch(API_BASE + '/employees')
-            .then(function(r) {
-                console.log('📥 Response status:', r.status);
-                return r.json();
-            })
-            .then(function(data) {
-                console.log('📥 Employees count:', data.data ? data.data.length : 0);
-                return data;
-            })
-            .catch(function(err) {
-                console.error('❌ Get employees error:', err);
-                return { success: false, message: err.message, data: [] };
-            });
-    },
-    
-    addEmployee: function(data) {
-        console.log('📤 API.addEmployee called with:', data);
-        return fetch(API_BASE + '/employees', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        })
-        .then(function(r) {
-            console.log('📥 Response status:', r.status);
-            return r.json();
-        })
-        .then(function(data) {
-            console.log('📥 Add employee response:', data);
-            return data;
-        })
-        .catch(function(err) {
-            console.error('❌ Add employee error:', err);
-            return { success: false, message: err.message };
-        });
-    },
-    
-    deleteEmployee: function(id) {
-        console.log('📤 API.deleteEmployee called - ID:', id);
-        return fetch(API_BASE + '/employees/' + id, {
-            method: 'DELETE'
-        })
-        .then(function(r) {
-            console.log('📥 Response status:', r.status);
-            return r.json();
-        })
-        .then(function(data) {
-            console.log('📥 Delete employee response:', data);
-            return data;
-        })
-        .catch(function(err) {
-            console.error('❌ Delete employee error:', err);
-            return { success: false, message: err.message };
-        });
-    },
-    
-    // ==================== RETURNS (QAYTARISH) ====================
-    
-    returnProduct: function(data) {
-        console.log('📤 API.returnProduct called with:', data);
-        return fetch(API_BASE + '/returns', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        })
-        .then(function(r) {
-            console.log('📥 Response status:', r.status);
-            return r.json();
-        })
-        .then(function(data) {
-            console.log('📥 Return product response:', data);
-            return data;
-        })
-        .catch(function(err) {
-            console.error('❌ Return product error:', err);
-            return { success: false, message: err.message };
-        });
-    },
-    
-    getReturns: function(date) {
-        var queryDate = date || new Date().toISOString().split('T')[0];
-        console.log('📤 API.getReturns called - date:', queryDate);
-        return fetch(API_BASE + '/returns?date=' + queryDate)
-            .then(function(r) {
-                console.log('📥 Response status:', r.status);
-                return r.json();
-            })
-            .then(function(data) {
-                console.log('📥 Returns count:', data.data ? data.data.length : 0);
-                return data;
-            })
-            .catch(function(err) {
-                console.error('❌ Get returns error:', err);
-                return { success: false, message: err.message, data: [] };
-            });
-    },
-    
-    getAllReturns: function() {
-        console.log('📤 API.getAllReturns called');
-        return fetch(API_BASE + '/returns/all')
-            .then(function(r) {
-                console.log('📥 Response status:', r.status);
-                return r.json();
-            })
-            .then(function(data) {
-                console.log('📥 All returns count:', data.data ? data.data.length : 0);
-                return data;
-            })
-            .catch(function(err) {
-                console.error('❌ Get all returns error:', err);
-                return { success: false, message: err.message, data: [] };
-            });
-    },
-    
-    // ==================== GENERIC REQUEST (QO'SHIMCHA) ====================
+    // ==================== GENERIC REQUEST ====================
     request: function(url, options) {
         options = options || {};
-        console.log('📤 API.request called - url:', url);
+        console.log('📤 API.request - url:', url);
         return fetch(API_BASE + url, {
             method: options.method || 'GET',
             headers: { 'Content-Type': 'application/json' },
@@ -505,10 +375,12 @@ var API = {
         })
         .then(function(r) {
             console.log('📥 Response status:', r.status);
+            if (!r.ok) {
+                throw new Error('HTTP ' + r.status);
+            }
             return r.json();
         })
         .then(function(data) {
-            console.log('📥 Request response:', data);
             return data;
         })
         .catch(function(err) {
