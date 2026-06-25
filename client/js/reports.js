@@ -5,6 +5,22 @@
 var reportInterval = null;
 var isReportActive = false;
 
+// ============================================
+// 🔥 API_BASE ni tekshirish
+// ============================================
+if (typeof API_BASE === 'undefined') {
+    var API_BASE = (function() {
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            return 'http://localhost:5000/api';
+        }
+        if (window.location.hostname.includes('vercel.app')) {
+            return window.location.origin + '/api';
+        }
+        return window.location.origin + '/api';
+    })();
+    console.log('📦 API_BASE set in reports.js:', API_BASE);
+}
+
 function loadReports(container) {
     var today = new Date().toISOString().split('T')[0];
     
@@ -53,9 +69,9 @@ function loadReports(container) {
                 </div>
             </div>
             
-            <!-- 🔥 YOPILGAN SMENALAR HISOBOTI -->
+            <!-- Smena tarixi -->
             <div class="section-card">
-                <h3><i class="fas fa-history"></i> 📋 Smena tarixi (Yopilgan smenalar)</h3>
+                <h3><i class="fas fa-history"></i> Smena tarixi (Yopilgan smenalar)</h3>
                 <div class="table-wrap">
                     <table>
                         <thead>
@@ -73,12 +89,13 @@ function loadReports(container) {
                             </tr>
                         </thead>
                         <tbody id="shiftHistoryTable">
-                            <tr><td colspan="10" class="text-center">Yuklanmoqda...</td></tr>
+                            <tr><td colspan="10" style="text-align:center;padding:20px;">⏳ Yuklanmoqda...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
             
+            <!-- Qarzdorlar -->
             <div class="section-card">
                 <h3><i class="fas fa-users"></i> Qarzdorlar</h3>
                 <div class="table-wrap">
@@ -95,12 +112,13 @@ function loadReports(container) {
                             </tr>
                         </thead>
                         <tbody id="debtorsTable">
-                            <tr><td colspan="7" class="text-center">Yuklanmoqda...</td></tr>
+                            <tr><td colspan="7" style="text-align:center;padding:20px;">⏳ Yuklanmoqda...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
             
+            <!-- Savdo ro'yxati -->
             <div class="section-card">
                 <h3><i class="fas fa-list"></i> Savdo ro'yxati</h3>
                 <div class="table-wrap">
@@ -116,7 +134,7 @@ function loadReports(container) {
                             </tr>
                         </thead>
                         <tbody id="reportSalesTable">
-                            <tr><td colspan="6" class="text-center">Yuklanmoqda...</td></tr>
+                            <tr><td colspan="6" style="text-align:center;padding:20px;">⏳ Yuklanmoqda...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -130,7 +148,7 @@ function loadReports(container) {
 }
 
 // ============================================
-// 🔥 REAL VAQTDA YANGILASH
+// REAL VAQTDA YANGILASH
 // ============================================
 function startReportUpdates() {
     if (reportInterval) {
@@ -160,7 +178,7 @@ function stopReportUpdates() {
 }
 
 // ============================================
-// GENERATE REPORT - TUZATILGAN
+// GENERATE REPORT
 // ============================================
 function generateReport() {
     var dateInput = document.getElementById('reportDate');
@@ -170,7 +188,7 @@ function generateReport() {
     
     console.log('📊 Hisobot yuklanmoqda - Sana:', dateValue);
     
-    // 🔥 Daily report - API.getDailyReport ishlatiladi
+    // Daily report
     API.getDailyReport(dateValue).then(function(data) {
         console.log('📥 Daily report javobi:', data);
         if (data.success) {
@@ -187,10 +205,10 @@ function generateReport() {
             if (rCredit) rCredit.textContent = (data.data.credit_amount || 0).toLocaleString() + ' so\'m';
         }
     }).catch(function(err) {
-        console.error('❌ Report error:', err);
+        console.error('Report error:', err);
     });
     
-    // 🔥 Sales details - API.getSales ishlatiladi
+    // Sales details
     API.getSales(dateValue).then(function(data) {
         console.log('📥 Sales details javobi:', data);
         if (data.success) {
@@ -198,7 +216,7 @@ function generateReport() {
             if (!tbody) return;
             
             if (!data.data || data.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center">📭 Savdolar yo\'q</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;">📭 Savdolar yo\'q</td></tr>';
                 return;
             }
             
@@ -222,10 +240,10 @@ function generateReport() {
             tbody.innerHTML = html;
         }
     }).catch(function(err) {
-        console.error('❌ Sales details error:', err);
+        console.error('Sales details error:', err);
         var tbody = document.getElementById('reportSalesTable');
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center">❌ Xatolik yuz berdi</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#e74c3c;">Xatolik yuz berdi</td></tr>';
         }
     });
     
@@ -234,7 +252,7 @@ function generateReport() {
 }
 
 // ============================================
-// 🔥 SMENA TARIXI (YOPILGAN SMENALAR)
+// SMENA TARIXI
 // ============================================
 function loadShiftHistory() {
     console.log('📤 Smena tarixi yuklanmoqda...');
@@ -245,14 +263,13 @@ function loadShiftHistory() {
         if (!tbody) return;
         
         if (!data.success || !data.data || data.data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center">📭 Smena tarixi yo\'q</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;">📭 Smena tarixi yo\'q</td></tr>';
             return;
         }
         
         var html = '';
         var count = 0;
         data.data.forEach(function(s) {
-            // 🔥 Faqat yopilgan smenalarni ko'rsatish
             if (s.is_active === 0) {
                 count++;
                 var opened = s.opened_at ? new Date(s.opened_at).toLocaleString() : '-';
@@ -274,21 +291,21 @@ function loadShiftHistory() {
                 html += '<td>' + cashAmount + '</td>';
                 html += '<td>' + terminalAmount + '</td>';
                 html += '<td>' + creditAmount + '</td>';
-                html += '<td><span class="badge-status inactive">🔴 Yopilgan</span></td>';
+                html += '<td><span class="badge-status inactive">Yopilgan</span></td>';
                 html += '</tr>';
             }
         });
         
         if (html === '') {
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center">📭 Hali yopilgan smena yo\'q</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;">📭 Hali yopilgan smena yo\'q</td></tr>';
         } else {
             tbody.innerHTML = html;
         }
     }).catch(function(err) {
-        console.error('❌ Shift history error:', err);
+        console.error('Shift history error:', err);
         var tbody = document.getElementById('shiftHistoryTable');
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center">❌ Xatolik yuz berdi</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;color:#e74c3c;">Xatolik yuz berdi</td></tr>';
         }
     });
 }
@@ -305,7 +322,7 @@ function loadDebtors() {
         if (!tbody) return;
         
         if (!data.success || !data.data || data.data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center">📭 Qarzdorlar yo\'q</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;">📭 Qarzdorlar yo\'q</td></tr>';
             return;
         }
         
@@ -324,30 +341,29 @@ function loadDebtors() {
         
         tbody.innerHTML = html;
     }).catch(function(err) {
-        console.error('❌ Debtors error:', err);
+        console.error('Debtors error:', err);
         var tbody = document.getElementById('debtorsTable');
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center">❌ Xatolik yuz berdi</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#e74c3c;">Xatolik yuz berdi</td></tr>';
         }
     });
 }
 
 // ============================================
-// 🔥 PAY DEBT - TUZATILGAN
+// PAY DEBT
 // ============================================
 function payDebt(id) {
     var amount = prompt('To\'lanadigan summa (so\'m):');
     if (!amount || isNaN(amount) || parseFloat(amount) <= 0) {
-        showToast('❌ To\'g\'ri summa kiriting!', 'error');
+        showToast('To\'g\'ri summa kiriting!', 'error');
         return;
     }
     
-    // Qarzdorni tekshirish
     API.getDebtors().then(function(data) {
         if (data.success && data.data) {
             var debtor = data.data.find(function(d) { return d.id === id; });
             if (!debtor) {
-                showToast('❌ Qarzdor topilmadi!', 'error');
+                showToast('Qarzdor topilmadi!', 'error');
                 return;
             }
             
@@ -355,68 +371,46 @@ function payDebt(id) {
             var payAmount = parseFloat(amount);
             
             if (payAmount > currentDebt) {
-                showToast('❌ Qarz miqdoridan ko\'p to\'lay olmaysiz! Qarz: ' + currentDebt.toLocaleString() + ' so\'m', 'error');
+                showToast('Qarz miqdoridan ko\'p to\'lay olmaysiz! Qarz: ' + currentDebt.toLocaleString() + ' so\'m', 'error');
                 return;
             }
             
-            // To'lash so'rovini yuborish
             API.payDebt(id, payAmount).then(function(result) {
                 if (result.success) {
                     var remaining = result.data.remaining || 0;
                     if (remaining <= 0) {
-                        showToast('✅ Qarz to\'liq to\'landi!', 'success');
+                        showToast('Qarz to\'liq to\'landi!', 'success');
                     } else {
-                        showToast('✅ Qarz to\'landi! Qolgan: ' + remaining.toLocaleString() + ' so\'m', 'success');
+                        showToast('Qarz to\'landi! Qolgan: ' + remaining.toLocaleString() + ' so\'m', 'success');
                     }
                     loadDebtors();
                     generateReport();
                 } else {
-                    showToast('❌ Xatolik: ' + (result.message || 'Noma\'lum xatolik'), 'error');
+                    showToast('Xatolik: ' + (result.message || 'Noma\'lum xatolik'), 'error');
                 }
             }).catch(function(err) {
-                showToast('❌ Server xatosi: ' + err.message, 'error');
+                showToast('Server xatosi: ' + err.message, 'error');
             });
         }
     }).catch(function(err) {
-        showToast('❌ Qarzdor ma\'lumotlarini olishda xatolik!', 'error');
+        showToast('Qarzdor ma\'lumotlarini olishda xatolik!', 'error');
     });
 }
 
 // ============================================
-// TOAST (agar mavjud bo'lmasa)
+// TOAST
 // ============================================
 if (typeof showToast === 'undefined') {
     function showToast(message, type) {
         type = type || 'success';
         var toast = document.createElement('div');
         toast.className = 'toast ' + type;
-        var icons = {
-            success: '✅ ',
-            error: '❌ ',
-            warning: '⚠️ ',
-            info: 'ℹ️ '
-        };
-        toast.textContent = (icons[type] || 'ℹ️ ') + message;
-        toast.style.cssText = 'position:fixed;bottom:30px;right:30px;padding:14px 24px;border-radius:10px;color:#fff;font-weight:500;z-index:9999;animation:slideIn 0.4s ease;box-shadow:0 10px 40px rgba(0,0,0,0.2);font-size:14px;max-width:400px;';
-        
-        var colors = {
-            success: '#22c55e',
-            error: '#ef4444',
-            warning: '#f59e0b',
-            info: '#4f46e5'
-        };
-        toast.style.background = colors[type] || '#4f46e5';
-        
+        toast.textContent = message;
         document.body.appendChild(toast);
         setTimeout(function() {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(30px)';
-            toast.style.transition = 'all 0.4s ease';
-            setTimeout(function() {
-                if (toast.parentNode) toast.remove();
-            }, 400);
+            if (toast.parentNode) toast.remove();
         }, 3000);
     }
 }
 
-console.log('✅ Reports.js loaded');
+console.log('Reports.js loaded');
