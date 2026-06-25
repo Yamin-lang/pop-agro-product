@@ -2,6 +2,8 @@
 // POP-AGRO-PRODUCT SERVER (TO'LIQ)
 // ============================================
 
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -127,105 +129,192 @@ function queryRun(sql, params = []) {
 }
 
 // ============================================
-// JADVALLARNI YARATISH (sale_dates SIZ)
+// JADVALLARNI YARATISH
 // ============================================
 async function createTables() {
     try {
-        // Products
-        await queryRun(`
-            CREATE TABLE IF NOT EXISTS products (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                code TEXT,
-                price REAL DEFAULT 0,
-                cost_price REAL DEFAULT 0,
-                quantity REAL DEFAULT 0,
-                unit TEXT DEFAULT 'dona',
-                image TEXT,
-                sales_count INTEGER DEFAULT 0,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
+        let productsSQL, salesSQL, shiftsSQL, debtorsSQL, employeesSQL, returnsSQL;
+        
+        if (USE_POSTGRES) {
+            // PostgreSQL uchun
+            productsSQL = `
+                CREATE TABLE IF NOT EXISTS products (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    code TEXT,
+                    price REAL DEFAULT 0,
+                    cost_price REAL DEFAULT 0,
+                    quantity REAL DEFAULT 0,
+                    unit TEXT DEFAULT 'dona',
+                    image TEXT,
+                    sales_count INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `;
+            salesSQL = `
+                CREATE TABLE IF NOT EXISTS sales (
+                    id SERIAL PRIMARY KEY,
+                    product_id INTEGER,
+                    quantity REAL DEFAULT 0,
+                    price REAL DEFAULT 0,
+                    total_price REAL DEFAULT 0,
+                    discount REAL DEFAULT 0,
+                    payment_type TEXT DEFAULT 'cash',
+                    shift_id INTEGER,
+                    sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `;
+            shiftsSQL = `
+                CREATE TABLE IF NOT EXISTS shifts (
+                    id SERIAL PRIMARY KEY,
+                    opening_balance REAL DEFAULT 0,
+                    closing_balance REAL DEFAULT 0,
+                    opened_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    closed_at TIMESTAMP,
+                    is_active INTEGER DEFAULT 1,
+                    total_sales INTEGER DEFAULT 0,
+                    total_amount REAL DEFAULT 0,
+                    cash_amount REAL DEFAULT 0,
+                    terminal_amount REAL DEFAULT 0,
+                    credit_amount REAL DEFAULT 0
+                )
+            `;
+            debtorsSQL = `
+                CREATE TABLE IF NOT EXISTS debtors (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    phone TEXT,
+                    address TEXT,
+                    amount REAL DEFAULT 0,
+                    sale_id INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    paid_at TIMESTAMP,
+                    is_paid INTEGER DEFAULT 0
+                )
+            `;
+            employeesSQL = `
+                CREATE TABLE IF NOT EXISTS employees (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    email TEXT UNIQUE,
+                    password TEXT,
+                    position TEXT,
+                    phone TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `;
+            returnsSQL = `
+                CREATE TABLE IF NOT EXISTS returns (
+                    id SERIAL PRIMARY KEY,
+                    sale_id INTEGER,
+                    product_id INTEGER,
+                    quantity REAL DEFAULT 0,
+                    price REAL DEFAULT 0,
+                    total_price REAL DEFAULT 0,
+                    reason TEXT,
+                    returned_by TEXT,
+                    return_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `;
+        } else {
+            // SQLite uchun
+            productsSQL = `
+                CREATE TABLE IF NOT EXISTS products (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    code TEXT,
+                    price REAL DEFAULT 0,
+                    cost_price REAL DEFAULT 0,
+                    quantity REAL DEFAULT 0,
+                    unit TEXT DEFAULT 'dona',
+                    image TEXT,
+                    sales_count INTEGER DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            `;
+            salesSQL = `
+                CREATE TABLE IF NOT EXISTS sales (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    product_id INTEGER,
+                    quantity REAL DEFAULT 0,
+                    price REAL DEFAULT 0,
+                    total_price REAL DEFAULT 0,
+                    discount REAL DEFAULT 0,
+                    payment_type TEXT DEFAULT 'cash',
+                    shift_id INTEGER,
+                    sale_date DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            `;
+            shiftsSQL = `
+                CREATE TABLE IF NOT EXISTS shifts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    opening_balance REAL DEFAULT 0,
+                    closing_balance REAL DEFAULT 0,
+                    opened_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    closed_at DATETIME,
+                    is_active INTEGER DEFAULT 1,
+                    total_sales INTEGER DEFAULT 0,
+                    total_amount REAL DEFAULT 0,
+                    cash_amount REAL DEFAULT 0,
+                    terminal_amount REAL DEFAULT 0,
+                    credit_amount REAL DEFAULT 0
+                )
+            `;
+            debtorsSQL = `
+                CREATE TABLE IF NOT EXISTS debtors (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    phone TEXT,
+                    address TEXT,
+                    amount REAL DEFAULT 0,
+                    sale_id INTEGER,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    paid_at DATETIME,
+                    is_paid INTEGER DEFAULT 0
+                )
+            `;
+            employeesSQL = `
+                CREATE TABLE IF NOT EXISTS employees (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    email TEXT UNIQUE,
+                    password TEXT,
+                    position TEXT,
+                    phone TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            `;
+            returnsSQL = `
+                CREATE TABLE IF NOT EXISTS returns (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    sale_id INTEGER,
+                    product_id INTEGER,
+                    quantity REAL DEFAULT 0,
+                    price REAL DEFAULT 0,
+                    total_price REAL DEFAULT 0,
+                    reason TEXT,
+                    returned_by TEXT,
+                    return_date DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            `;
+        }
+
+        await queryRun(productsSQL);
         console.log('✅ Products table ready');
 
-        // Sales
-        await queryRun(`
-            CREATE TABLE IF NOT EXISTS sales (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                product_id INTEGER,
-                quantity REAL DEFAULT 0,
-                price REAL DEFAULT 0,
-                total_price REAL DEFAULT 0,
-                discount REAL DEFAULT 0,
-                payment_type TEXT DEFAULT 'cash',
-                shift_id INTEGER,
-                sale_date DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
+        await queryRun(salesSQL);
         console.log('✅ Sales table ready');
 
-        // Shifts - sale_dates YO'Q
-        await queryRun(`
-            CREATE TABLE IF NOT EXISTS shifts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                opening_balance REAL DEFAULT 0,
-                closing_balance REAL DEFAULT 0,
-                opened_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                closed_at DATETIME,
-                is_active INTEGER DEFAULT 1,
-                total_sales INTEGER DEFAULT 0,
-                total_amount REAL DEFAULT 0,
-                cash_amount REAL DEFAULT 0,
-                terminal_amount REAL DEFAULT 0,
-                credit_amount REAL DEFAULT 0
-            )
-        `);
+        await queryRun(shiftsSQL);
         console.log('✅ Shifts table ready');
 
-        // Debtors
-        await queryRun(`
-            CREATE TABLE IF NOT EXISTS debtors (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                phone TEXT,
-                address TEXT,
-                amount REAL DEFAULT 0,
-                sale_id INTEGER,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                paid_at DATETIME,
-                is_paid INTEGER DEFAULT 0
-            )
-        `);
+        await queryRun(debtorsSQL);
         console.log('✅ Debtors table ready');
 
-        // Employees
-        await queryRun(`
-            CREATE TABLE IF NOT EXISTS employees (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                email TEXT UNIQUE,
-                password TEXT,
-                position TEXT,
-                phone TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
+        await queryRun(employeesSQL);
         console.log('✅ Employees table ready');
 
-        // Returns
-        await queryRun(`
-            CREATE TABLE IF NOT EXISTS returns (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                sale_id INTEGER,
-                product_id INTEGER,
-                quantity REAL DEFAULT 0,
-                price REAL DEFAULT 0,
-                total_price REAL DEFAULT 0,
-                reason TEXT,
-                returned_by TEXT,
-                return_date DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
+        await queryRun(returnsSQL);
         console.log('✅ Returns table ready');
 
     } catch (err) {
@@ -513,7 +602,7 @@ app.get('/api/shifts/current', async function(req, res) {
     }
 });
 
-// 🔥 SHIFTS HISTORY - sale_dates SIZ (TUZATILGAN)
+// 🔥 SHIFTS HISTORY - TUZATILGAN
 app.get('/api/shifts/history', async function(req, res) {
     console.log('📤 GET /api/shifts/history');
     try {
@@ -540,7 +629,6 @@ app.get('/api/shifts/history', async function(req, res) {
         res.json({ success: true, data: rows || [] });
     } catch (err) {
         console.error('Shift history error:', err);
-        // 🔥 Xatolik bo'lsa ham bo'sh ma'lumot qaytarish
         res.json({ success: true, data: [] });
     }
 });
