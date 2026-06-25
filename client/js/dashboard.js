@@ -53,6 +53,49 @@ function loadDashboard(container) {
                 </div>
             </div>
             
+            <!-- QO'SHIMCHA STATISTIKA -->
+            <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="stat-card indigo">
+                    <div class="stat-icon"><i class="fas fa-warehouse"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">🏪 Jami tavar qiymati</div>
+                        <div class="stat-value" id="statTotalCost">0 so'm</div>
+                    </div>
+                </div>
+                <div class="stat-card gold">
+                    <div class="stat-icon"><i class="fas fa-tag"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">💰 Sotish narxi (jami)</div>
+                        <div class="stat-value" id="statTotalPrice">0 so'm</div>
+                    </div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">📈 Potensial foyda</div>
+                        <div class="stat-value" id="statPotentialProfit">0 so'm</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- OYLIK FOYDA -->
+            <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="stat-card pink">
+                    <div class="stat-icon"><i class="fas fa-hand-holding-heart"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">📊 Oylik foyda</div>
+                        <div class="stat-value" id="statMonthlyProfit">0 so'm</div>
+                    </div>
+                </div>
+                <div class="stat-card cyan">
+                    <div class="stat-icon"><i class="fas fa-percentage"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">📊 Foyda foizi</div>
+                        <div class="stat-value" id="statProfitPercent">0%</div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- YANGILASH TUGMASI -->
             <div style="display:flex;justify-content:flex-end;margin-bottom:15px;">
                 <button onclick="refreshDashboard()" class="btn btn-primary" style="display:flex;align-items:center;gap:8px;padding:10px 20px;">
@@ -137,6 +180,25 @@ function refreshDashboard() {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .stat-card.indigo { background: linear-gradient(135deg, #4f46e5, #818cf8); color: white; }
+        .stat-card.gold { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: white; }
+        .stat-card.success { background: linear-gradient(135deg, #059669, #34d399); color: white; }
+        .stat-card.pink { background: linear-gradient(135deg, #db2777, #f472b6); color: white; }
+        .stat-card.cyan { background: linear-gradient(135deg, #0891b2, #22d3ee); color: white; }
+        .stat-value { font-size: 20px; font-weight: bold; margin-top: 5px; }
+        .dashboard-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
+        .stat-card { padding: 20px; border-radius: 12px; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.2s; cursor: default; }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-icon { font-size: 28px; opacity: 0.9; }
+        .stat-label { font-size: 14px; opacity: 0.85; font-weight: 500; }
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .dashboard-row { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr; }
+        }
     `;
     document.head.appendChild(style);
 })();
@@ -151,6 +213,7 @@ function loadDashboardData() {
     var now = new Date();
     var month = now.getMonth() + 1;
     var year = now.getFullYear();
+    var monthStr = String(month).padStart(2, '0');
     
     // JORIY SMENANI TEKSHIRISH
     API.getCurrentShift().then(function(shiftData) {
@@ -200,8 +263,72 @@ function loadDashboardData() {
         
         // Mahsulotlar soni
         loadProductsCount();
+        
+        // QO'SHIMCHA HISOBOTLAR
+        loadReports(year, month);
+        
     }).catch(function(err) {
         console.error('❌ Shift check error:', err);
+    });
+}
+
+// ============================================
+// 📊 QO'SHIMCHA HISOBOTLARNI YUKLASH
+// ============================================
+function loadReports(year, month) {
+    console.log('📊 Qo\'shimcha hisobotlar yuklanmoqda...');
+    
+    // 1. Ombor holati (Inventory)
+    API.request('/api/reports/inventory').then(function(data) {
+        console.log('📥 Inventory javobi:', data);
+        if (data.success && data.data) {
+            var elTotalCost = document.getElementById('statTotalCost');
+            var elTotalPrice = document.getElementById('statTotalPrice');
+            var elPotentialProfit = document.getElementById('statPotentialProfit');
+            
+            if (elTotalCost) elTotalCost.textContent = (data.data.total_cost || 0).toLocaleString() + ' so\'m';
+            if (elTotalPrice) elTotalPrice.textContent = (data.data.total_price || 0).toLocaleString() + ' so\'m';
+            if (elPotentialProfit) {
+                var profit = data.data.potential_profit || 0;
+                elPotentialProfit.textContent = profit.toLocaleString() + ' so\'m';
+                elPotentialProfit.style.color = profit >= 0 ? '#22c55e' : '#ef4444';
+            }
+        }
+    }).catch(function(err) {
+        console.error('❌ Inventory error:', err);
+    });
+    
+    // 2. Oylik foyda
+    var url = '/api/reports/monthly-profit?year=' + year + '&month=' + month;
+    API.request(url).then(function(data) {
+        console.log('📥 Oylik foyda javobi:', data);
+        if (data.success && data.data) {
+            var elMonthlyProfit = document.getElementById('statMonthlyProfit');
+            var elProfitPercent = document.getElementById('statProfitPercent');
+            
+            if (elMonthlyProfit) {
+                var profit = data.data.total_profit || 0;
+                elMonthlyProfit.textContent = profit.toLocaleString() + ' so\'m';
+                elMonthlyProfit.style.color = profit >= 0 ? '#22c55e' : '#ef4444';
+            }
+            
+            // Foyda foizi - inventory dan olamiz
+            API.request('/api/reports/inventory').then(function(invData) {
+                if (invData.success && invData.data) {
+                    var totalCost = invData.data.total_cost || 0;
+                    var potentialProfit = invData.data.potential_profit || 0;
+                    var percent = totalCost > 0 ? ((potentialProfit / totalCost) * 100) : 0;
+                    if (elProfitPercent) {
+                        elProfitPercent.textContent = percent.toFixed(1) + '%';
+                        elProfitPercent.style.color = percent >= 0 ? '#22c55e' : '#ef4444';
+                    }
+                }
+            }).catch(function(err) {
+                console.error('❌ Profit percent error:', err);
+            });
+        }
+    }).catch(function(err) {
+        console.error('❌ Monthly profit error:', err);
     });
 }
 
@@ -261,10 +388,22 @@ function updateDailyStats(data) {
     var elTerminal = document.getElementById('statTerminal');
     var elCredit = document.getElementById('statCredit');
     
-    if (elToday) elToday.textContent = total.toLocaleString() + ' so\'m';
-    if (elCash) elCash.textContent = cashTotal.toLocaleString() + ' so\'m';
-    if (elTerminal) elTerminal.textContent = terminalTotal.toLocaleString() + ' so\'m';
-    if (elCredit) elCredit.textContent = creditTotal.toLocaleString() + ' so\'m';
+    if (elToday) {
+        elToday.textContent = total.toLocaleString() + ' so\'m';
+        elToday.style.color = '#1e293b';
+    }
+    if (elCash) {
+        elCash.textContent = cashTotal.toLocaleString() + ' so\'m';
+        elCash.style.color = '#22c55e';
+    }
+    if (elTerminal) {
+        elTerminal.textContent = terminalTotal.toLocaleString() + ' so\'m';
+        elTerminal.style.color = '#f59e0b';
+    }
+    if (elCredit) {
+        elCredit.textContent = creditTotal.toLocaleString() + ' so\'m';
+        elCredit.style.color = '#8b5cf6';
+    }
 }
 
 // ============================================

@@ -539,6 +539,11 @@
         .stat-card.purple::after { background: #8b5cf6; }
         .stat-card.red::after { background: var(--danger); }
         .stat-card.teal::after { background: #14b8a6; }
+        .stat-card.indigo::after { background: #4f46e5; }
+        .stat-card.gold::after { background: #f59e0b; }
+        .stat-card.success::after { background: #059669; }
+        .stat-card.pink::after { background: #db2777; }
+        .stat-card.cyan::after { background: #0891b2; }
         
         .stat-card:hover {
             transform: translateY(-4px);
@@ -563,6 +568,11 @@
         .stat-card.purple .stat-icon { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
         .stat-card.red .stat-icon { background: linear-gradient(135deg, var(--danger), #dc2626); }
         .stat-card.teal .stat-icon { background: linear-gradient(135deg, #14b8a6, #0d9488); }
+        .stat-card.indigo .stat-icon { background: linear-gradient(135deg, #4f46e5, #818cf8); }
+        .stat-card.gold .stat-icon { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
+        .stat-card.success .stat-icon { background: linear-gradient(135deg, #059669, #34d399); }
+        .stat-card.pink .stat-icon { background: linear-gradient(135deg, #db2777, #f472b6); }
+        .stat-card.cyan .stat-icon { background: linear-gradient(135deg, #0891b2, #22d3ee); }
         
         .stat-card .stat-info {
             flex: 1;
@@ -1959,9 +1969,144 @@
     </div>
 
     <!-- ============================================
+    TOAST CONTAINER
+    ============================================ -->
+    <div id="toastContainer"></div>
+
+    <!-- ============================================
     JAVASCRIPT
     ============================================ -->
-    <script src="js/api.js"></script>
+    <script>
+        // ============================================
+        // TOAST FUNKSIYASI
+        // ============================================
+        function showToast(message, type) {
+            type = type || 'info';
+            var container = document.getElementById('toastContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toastContainer';
+                document.body.appendChild(container);
+            }
+            
+            var toast = document.createElement('div');
+            toast.className = 'toast ' + type;
+            
+            var icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            toast.innerHTML = (icons[type] || 'ℹ️') + ' ' + message;
+            
+            container.appendChild(toast);
+            
+            setTimeout(function() {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(30px)';
+                toast.style.transition = 'all 0.4s ease';
+                setTimeout(function() {
+                    toast.remove();
+                }, 400);
+            }, 3000);
+        }
+
+        // ============================================
+        // API BASE
+        // ============================================
+        var API_BASE = window.location.origin;
+        
+        // ============================================
+        // API FUNKSIYALARI
+        // ============================================
+        var API = {
+            request: function(url, options) {
+                options = options || {};
+                return fetch(API_BASE + url, {
+                    method: options.method || 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: options.body ? JSON.stringify(options.body) : undefined
+                })
+                .then(function(res) { return res.json(); })
+                .catch(function(err) {
+                    console.error('API Error:', err);
+                    return { success: false, message: err.message };
+                });
+            },
+            
+            getProducts: function() {
+                return this.request('/api/products');
+            },
+            
+            addProduct: function(data) {
+                return this.request('/api/products', { method: 'POST', body: data });
+            },
+            
+            updateProduct: function(id, data) {
+                return this.request('/api/products/' + id, { method: 'PUT', body: data });
+            },
+            
+            deleteProduct: function(id) {
+                return this.request('/api/products/' + id, { method: 'DELETE' });
+            },
+            
+            addSale: function(data) {
+                return this.request('/api/sales', { method: 'POST', body: data });
+            },
+            
+            getDailySales: function(date, shiftId) {
+                var url = '/api/sales/daily?date=' + date;
+                if (shiftId) url += '&shift_id=' + shiftId;
+                return this.request(url);
+            },
+            
+            getMonthlySales: function(year, month) {
+                return this.request('/api/sales/monthly?year=' + year + '&month=' + month);
+            },
+            
+            getCurrentShift: function() {
+                return this.request('/api/shifts/current');
+            },
+            
+            openShift: function(balance) {
+                return this.request('/api/shifts/open', { method: 'POST', body: { openingBalance: balance } });
+            },
+            
+            closeShift: function(balance) {
+                return this.request('/api/shifts/close', { method: 'POST', body: { closingBalance: balance } });
+            },
+            
+            getShiftHistory: function() {
+                return this.request('/api/shifts/history');
+            },
+            
+            getDailyReport: function(date) {
+                return this.request('/api/reports/daily?date=' + date);
+            },
+            
+            // ============================================
+            // 📊 QO'SHIMCHA HISOBOTLAR
+            // ============================================
+            getMonthlyReport: function(year, month) {
+                return this.request('/api/reports/monthly?year=' + year + '&month=' + month);
+            },
+            
+            getInventoryReport: function() {
+                return this.request('/api/reports/inventory');
+            },
+            
+            getMonthlyProfit: function(year, month) {
+                return this.request('/api/reports/monthly-profit?year=' + year + '&month=' + month);
+            },
+            
+            getAllReports: function() {
+                return this.request('/api/reports/all');
+            }
+        };
+    </script>
     <script src="js/app.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/pos.js"></script>

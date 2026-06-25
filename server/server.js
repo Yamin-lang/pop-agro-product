@@ -988,6 +988,244 @@ app.get('/api/returns/all', async function(req, res) {
 });
 
 // ============================================
+// 📊 QO'SHIMCHA HISOBOTLAR
+// ============================================
+
+// 1. Oylik savdo hisoboti
+app.get('/api/reports/monthly', async function(req, res) {
+    const year = req.query.year;
+    const month = req.query.month;
+    const now = new Date();
+    const y = year || now.getFullYear();
+    const m = month || (now.getMonth() + 1);
+    const monthStr = String(m).padStart(2, '0');
+    
+    console.log('📤 GET /api/reports/monthly?year=' + y + '&month=' + m);
+    
+    try {
+        let sql;
+        if (USE_POSTGRES) {
+            sql = `
+                SELECT 
+                    COUNT(*) as total_sales,
+                    COALESCE(SUM(total_price), 0) as total_amount,
+                    COALESCE(SUM(CASE WHEN payment_type = 'cash' THEN total_price ELSE 0 END), 0) as cash_amount,
+                    COALESCE(SUM(CASE WHEN payment_type = 'terminal' THEN total_price ELSE 0 END), 0) as terminal_amount,
+                    COALESCE(SUM(CASE WHEN payment_type = 'credit' THEN total_price ELSE 0 END), 0) as credit_amount
+                FROM sales
+                WHERE EXTRACT(YEAR FROM sale_date) = $1 AND EXTRACT(MONTH FROM sale_date) = $2
+            `;
+        } else {
+            sql = `
+                SELECT 
+                    COUNT(*) as total_sales,
+                    COALESCE(SUM(total_price), 0) as total_amount,
+                    COALESCE(SUM(CASE WHEN payment_type = 'cash' THEN total_price ELSE 0 END), 0) as cash_amount,
+                    COALESCE(SUM(CASE WHEN payment_type = 'terminal' THEN total_price ELSE 0 END), 0) as terminal_amount,
+                    COALESCE(SUM(CASE WHEN payment_type = 'credit' THEN total_price ELSE 0 END), 0) as credit_amount
+                FROM sales
+                WHERE strftime('%Y', sale_date) = ? AND strftime('%m', sale_date) = ?
+            `;
+        }
+        const row = await queryOne(sql, [String(y), monthStr]);
+        res.json({ success: true, data: row || { total_sales: 0, total_amount: 0 } });
+    } catch (err) {
+        console.error('Monthly report error:', err);
+        res.status(500).json({ success: false, message: err.message, data: {} });
+    }
+});
+
+// 2. Jami tavar qiymati va foyda
+app.get('/api/reports/inventory', async function(req, res) {
+    console.log('📤 GET /api/reports/inventory');
+    
+    try {
+        const rows = await query('SELECT name, price, cost_price, quantity FROM products');
+        
+        let totalCost = 0;
+        let totalPrice = 0;
+        let totalQuantity = 0;
+        
+        rows.forEach(function(p) {
+            const qty = p.quantity || 0;
+            const cost = p.cost_price || 0;
+            const price = p.price || 0;
+            
+            totalCost += qty * cost;
+            totalPrice += qty * price;
+            totalQuantity += qty;
+        });
+        
+        const potentialProfit = totalPrice - totalCost;
+        
+        res.json({ 
+            success: true, 
+            data: {
+                total_quantity: totalQuantity,
+                total_cost: totalCost,
+                total_price: totalPrice,
+                potential_profit: potentialProfit,
+                products: rows
+            }
+        });
+    } catch (err) {
+        console.error('Inventory report error:', err);
+        res.status(500).json({ success: false, message: err.message, data: {} });
+    }
+});
+
+// 3. Oylik foyda hisoboti
+app.get('/api/reports/monthly-profit', async function(req, res) {
+    const year = req.query.year;
+    const month = req.query.month;
+    const now = new Date();
+    const y = year || now.getFullYear();
+    const m = month || (now.getMonth() + 1);
+    const monthStr = String(m).padStart(2, '0');
+    
+    console.log('📤 GET /api/reports/monthly-profit?year=' + y + '&month=' + m);
+    
+    try {
+        let sql;
+        if (USE_POSTGRES) {
+            sql = `
+                SELECT 
+                    s.*,
+                    p.cost_price,
+                    p.name as product_name,
+                    (s.price - p.cost_price) * s.quantity as profit
+                FROM sales s
+                LEFT JOIN products p ON s.product_id = p.id
+                WHERE EXTRACT(YEAR FROM s.sale_date) = $1 AND EXTRACT(MONTH FROM s.sale_date) = $2
+            `;
+        } else {
+            sql = `
+                SELECT 
+                    s.*,
+                    p.cost_price,
+                    p.name as product_name,
+                    (s.price - p.cost_price) * s.quantity as profit
+                FROM sales s
+                LEFT JOIN products p ON s.product_id = p.id
+                WHERE strftime('%Y', s.sale_date) = ? AND strftime('%m', s.sale_date) = ?
+            `;
+        }
+        const rows = await query(sql, [String(y), monthStr]);
+        
+        let totalProfit = 0;
+        rows.forEach(function(r) {
+            totalProfit += r.profit || 0;
+        });
+        
+        res.json({ 
+            success: true, 
+            data: {
+                total_profit: totalProfit,
+                total_sales: rows.length,
+                details: rows
+            }
+        });
+    } catch (err) {
+        console.error('Monthly profit error:', err);
+        res.status(500).json({ success: false, message: err.message, data: {} });
+    }
+});
+
+// 4. Barcha hisobotlar (bir vaqtda)
+app.get('/api/reports/all', async function(req, res) {
+    console.log('📤 GET /api/reports/all');
+    
+    try {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        const monthStr = String(month).padStart(2, '0');
+        
+        // Oylik savdo
+        let monthlySql;
+        if (USE_POSTGRES) {
+            monthlySql = `
+                SELECT 
+                    COUNT(*) as total_sales,
+                    COALESCE(SUM(total_price), 0) as total_amount,
+                    COALESCE(SUM(CASE WHEN payment_type = 'cash' THEN total_price ELSE 0 END), 0) as cash_amount,
+                    COALESCE(SUM(CASE WHEN payment_type = 'terminal' THEN total_price ELSE 0 END), 0) as terminal_amount,
+                    COALESCE(SUM(CASE WHEN payment_type = 'credit' THEN total_price ELSE 0 END), 0) as credit_amount
+                FROM sales
+                WHERE EXTRACT(YEAR FROM sale_date) = $1 AND EXTRACT(MONTH FROM sale_date) = $2
+            `;
+        } else {
+            monthlySql = `
+                SELECT 
+                    COUNT(*) as total_sales,
+                    COALESCE(SUM(total_price), 0) as total_amount,
+                    COALESCE(SUM(CASE WHEN payment_type = 'cash' THEN total_price ELSE 0 END), 0) as cash_amount,
+                    COALESCE(SUM(CASE WHEN payment_type = 'terminal' THEN total_price ELSE 0 END), 0) as terminal_amount,
+                    COALESCE(SUM(CASE WHEN payment_type = 'credit' THEN total_price ELSE 0 END), 0) as credit_amount
+                FROM sales
+                WHERE strftime('%Y', sale_date) = ? AND strftime('%m', sale_date) = ?
+            `;
+        }
+        const monthly = await queryOne(monthlySql, [String(year), monthStr]);
+        
+        // Ombor holati
+        const inventoryRows = await query('SELECT name, price, cost_price, quantity FROM products');
+        let totalCost = 0;
+        let totalPrice = 0;
+        let totalQuantity = 0;
+        
+        inventoryRows.forEach(function(p) {
+            const qty = p.quantity || 0;
+            const cost = p.cost_price || 0;
+            const price = p.price || 0;
+            totalCost += qty * cost;
+            totalPrice += qty * price;
+            totalQuantity += qty;
+        });
+        
+        // Oylik foyda
+        let profitSql;
+        if (USE_POSTGRES) {
+            profitSql = `
+                SELECT 
+                    COALESCE(SUM((s.price - p.cost_price) * s.quantity), 0) as total_profit,
+                    COUNT(*) as total_sales
+                FROM sales s
+                LEFT JOIN products p ON s.product_id = p.id
+                WHERE EXTRACT(YEAR FROM s.sale_date) = $1 AND EXTRACT(MONTH FROM s.sale_date) = $2
+            `;
+        } else {
+            profitSql = `
+                SELECT 
+                    COALESCE(SUM((s.price - p.cost_price) * s.quantity), 0) as total_profit,
+                    COUNT(*) as total_sales
+                FROM sales s
+                LEFT JOIN products p ON s.product_id = p.id
+                WHERE strftime('%Y', s.sale_date) = ? AND strftime('%m', s.sale_date) = ?
+            `;
+        }
+        const profit = await queryOne(profitSql, [String(year), monthStr]);
+        
+        res.json({ 
+            success: true, 
+            data: {
+                monthly: monthly || { total_sales: 0, total_amount: 0 },
+                inventory: {
+                    total_quantity: totalQuantity,
+                    total_cost: totalCost,
+                    total_price: totalPrice,
+                    potential_profit: totalPrice - totalCost
+                },
+                profit: profit || { total_profit: 0, total_sales: 0 }
+            }
+        });
+    } catch (err) {
+        console.error('All reports error:', err);
+        res.status(500).json({ success: false, message: err.message, data: {} });
+    }
+});
+
+// ============================================
 // FRONTEND
 // ============================================
 app.get('*', function(req, res) {
@@ -1003,6 +1241,10 @@ app.listen(PORT, function() {
     console.log('='.repeat(50));
     console.log('✅ Server: http://localhost:' + PORT);
     console.log('📊 API: http://localhost:' + PORT + '/api/products');
+    console.log('📊 Monthly Report: http://localhost:' + PORT + '/api/reports/monthly');
+    console.log('📊 Inventory: http://localhost:' + PORT + '/api/reports/inventory');
+    console.log('📊 Monthly Profit: http://localhost:' + PORT + '/api/reports/monthly-profit');
+    console.log('📊 All Reports: http://localhost:' + PORT + '/api/reports/all');
     console.log('🔄 Returns: http://localhost:' + PORT + '/api/returns');
     console.log('📋 Shifts: http://localhost:' + PORT + '/api/shifts/history');
     console.log('🌐 Frontend: http://localhost:' + PORT);
@@ -1016,3 +1258,8 @@ process.on('uncaughtException', function(err) {
 process.on('unhandledRejection', function(err) {
     console.error('❌ Unhandled Rejection:', err);
 });
+
+// ============================================
+// 🚀 VERCEL EXPORT
+// ============================================
+module.exports = app;
