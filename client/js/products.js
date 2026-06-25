@@ -97,9 +97,14 @@ function loadProducts(container) {
 // CALC MARGIN
 // ============================================
 function calcMargin() {
-    var cost = parseFloat(document.getElementById('pCostPrice').value) || 0;
-    var sell = parseFloat(document.getElementById('pSellPrice').value) || 0;
+    var costInput = document.getElementById('pCostPrice');
+    var sellInput = document.getElementById('pSellPrice');
     var marginEl = document.getElementById('pMargin');
+    
+    if (!costInput || !sellInput || !marginEl) return;
+    
+    var cost = parseFloat(costInput.value) || 0;
+    var sell = parseFloat(sellInput.value) || 0;
     
     if (cost > 0 && sell > 0) {
         var margin = ((sell - cost) / cost * 100).toFixed(1);
@@ -116,37 +121,51 @@ function calcMargin() {
 // ============================================
 function showAddProduct() {
     editingProductId = null;
-    document.getElementById('productFormTitle').textContent = '➕ Yangi mahsulot';
-    document.getElementById('productForm').style.display = 'block';
-    document.getElementById('currentImage').style.display = 'none';
+    var titleEl = document.getElementById('productFormTitle');
+    var formEl = document.getElementById('productForm');
+    var imageEl = document.getElementById('currentImage');
+    
+    if (titleEl) titleEl.textContent = '➕ Yangi mahsulot';
+    if (formEl) formEl.style.display = 'block';
+    if (imageEl) imageEl.style.display = 'none';
+    
     clearProductForm();
-    document.getElementById('productForm').scrollIntoView({ behavior: 'smooth' });
+    var form = document.getElementById('productForm');
+    if (form) form.scrollIntoView({ behavior: 'smooth' });
 }
 
 function hideAddProduct() {
-    document.getElementById('productForm').style.display = 'none';
+    var formEl = document.getElementById('productForm');
+    if (formEl) formEl.style.display = 'none';
     clearProductForm();
     editingProductId = null;
 }
 
 function clearProductForm() {
-    document.getElementById('pName').value = '';
-    document.getElementById('pCode').value = '';
-    document.getElementById('pCostPrice').value = '';
-    document.getElementById('pSellPrice').value = '';
-    document.getElementById('pQuantity').value = '';
-    document.getElementById('pMargin').value = '';
-    document.getElementById('pImage').value = '';
-    document.getElementById('pUnit').value = 'dona';
-    document.getElementById('currentImage').style.display = 'none';
+    var fields = ['pName', 'pCode', 'pCostPrice', 'pSellPrice', 'pQuantity', 'pMargin', 'pImage'];
+    fields.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    
+    var unitEl = document.getElementById('pUnit');
+    if (unitEl) unitEl.value = 'dona';
+    
+    var imageEl = document.getElementById('currentImage');
+    if (imageEl) imageEl.style.display = 'none';
 }
 
 // ============================================
 // SAVE PRODUCT (CREATE + UPDATE)
 // ============================================
 function saveProduct() {
-    var name = document.getElementById('pName').value.trim();
-    var sellPrice = document.getElementById('pSellPrice').value;
+    var nameInput = document.getElementById('pName');
+    var sellInput = document.getElementById('pSellPrice');
+    
+    if (!nameInput || !sellInput) return;
+    
+    var name = nameInput.value.trim();
+    var sellPrice = sellInput.value;
     
     if (!name || !sellPrice) {
         showToast('❌ Nomi va sotish narxi majburiy!', 'error');
@@ -155,11 +174,11 @@ function saveProduct() {
     
     var data = {
         name: name,
-        code: document.getElementById('pCode').value.trim(),
-        cost_price: parseFloat(document.getElementById('pCostPrice').value) || 0,
+        code: document.getElementById('pCode') ? document.getElementById('pCode').value.trim() : '',
+        cost_price: parseFloat(document.getElementById('pCostPrice') ? document.getElementById('pCostPrice').value : 0) || 0,
         price: parseFloat(sellPrice),
-        quantity: parseFloat(document.getElementById('pQuantity').value) || 0,
-        unit: document.getElementById('pUnit').value
+        quantity: parseFloat(document.getElementById('pQuantity') ? document.getElementById('pQuantity').value : 0) || 0,
+        unit: document.getElementById('pUnit') ? document.getElementById('pUnit').value : 'dona'
     };
     
     // Rasmni olish
@@ -174,9 +193,8 @@ function saveProduct() {
         };
         reader.readAsDataURL(file);
     } else if (editingProductId) {
-        // Tahrirlashda rasm o'zgarmasa, eski rasmni saqlash
         var currentImg = document.getElementById('currentImagePreview');
-        if (currentImg && currentImg.src) {
+        if (currentImg && currentImg.src && currentImg.src !== '') {
             data.image = currentImg.src;
         }
         sendProduct(data);
@@ -189,13 +207,19 @@ function sendProduct(data) {
     var method = editingProductId ? 'PUT' : 'POST';
     var url = editingProductId ? API_BASE + '/products/' + editingProductId : API_BASE + '/products';
     
+    console.log('📤 SEND PRODUCT - Method:', method, 'URL:', url, 'Data:', data);
+    
     fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     })
-    .then(function(r) { return r.json(); })
+    .then(function(r) { 
+        console.log('📥 Response status:', r.status);
+        return r.json(); 
+    })
     .then(function(result) {
+        console.log('📥 Response data:', result);
         if (result.success) {
             showToast(editingProductId ? '✅ Mahsulot yangilandi!' : '✅ Mahsulot qo\'shildi!', 'success');
             hideAddProduct();
@@ -205,14 +229,17 @@ function sendProduct(data) {
         }
     })
     .catch(function(err) {
+        console.error('❌ Server xatosi:', err);
         showToast('❌ Server xatosi: ' + err.message, 'error');
     });
 }
 
 // ============================================
-// 🔥 EDIT PRODUCT - TAHRIRLASH
+// EDIT PRODUCT - TAHRIRLASH
 // ============================================
 function editProduct(id) {
+    console.log('✏️ EDIT PRODUCT - ID:', id);
+    
     API.getProducts().then(function(data) {
         if (data.success && data.data) {
             var product = data.data.find(function(p) { return p.id === id; });
@@ -221,51 +248,69 @@ function editProduct(id) {
                 return;
             }
             
+            console.log('📦 Mahsulot topildi:', product);
+            
             editingProductId = id;
-            document.getElementById('productFormTitle').textContent = '✏️ Mahsulotni tahrirlash';
-            document.getElementById('productForm').style.display = 'block';
+            var titleEl = document.getElementById('productFormTitle');
+            if (titleEl) titleEl.textContent = '✏️ Mahsulotni tahrirlash';
+            
+            var formEl = document.getElementById('productForm');
+            if (formEl) formEl.style.display = 'block';
             
             // Ma'lumotlarni formaga yozish
-            document.getElementById('pName').value = product.name || '';
-            document.getElementById('pCode').value = product.code || '';
-            document.getElementById('pCostPrice').value = product.cost_price || 0;
-            document.getElementById('pSellPrice').value = product.price || 0;
-            document.getElementById('pQuantity').value = product.quantity || 0;
-            document.getElementById('pUnit').value = product.unit || 'dona';
+            var nameInput = document.getElementById('pName');
+            var codeInput = document.getElementById('pCode');
+            var costInput = document.getElementById('pCostPrice');
+            var sellInput = document.getElementById('pSellPrice');
+            var qtyInput = document.getElementById('pQuantity');
+            var unitInput = document.getElementById('pUnit');
             
-            // Marjani hisoblash
+            if (nameInput) nameInput.value = product.name || '';
+            if (codeInput) codeInput.value = product.code || '';
+            if (costInput) costInput.value = product.cost_price || 0;
+            if (sellInput) sellInput.value = product.price || 0;
+            if (qtyInput) qtyInput.value = product.quantity || 0;
+            if (unitInput) unitInput.value = product.unit || 'dona';
+            
             calcMargin();
             
-            // Rasmni ko'rsatish
             var currentImage = document.getElementById('currentImage');
             var currentImagePreview = document.getElementById('currentImagePreview');
             
-            if (product.image) {
+            if (product.image && currentImagePreview) {
                 currentImagePreview.src = product.image;
-                currentImage.style.display = 'block';
+                if (currentImage) currentImage.style.display = 'block';
             } else {
-                currentImage.style.display = 'none';
+                if (currentImage) currentImage.style.display = 'none';
             }
             
-            document.getElementById('productForm').scrollIntoView({ behavior: 'smooth' });
+            var form = document.getElementById('productForm');
+            if (form) form.scrollIntoView({ behavior: 'smooth' });
+            
             showToast('✏️ Tahrirlash rejimi: ' + product.name, 'info');
         }
     });
 }
 
 // ============================================
-// DELETE PRODUCT
+// DELETE PRODUCT - TUZATILGAN
 // ============================================
 function deleteProduct(id) {
     if (!confirm('Mahsulotni o\'chirishni xohlaysizmi?')) return;
     
+    console.log('🗑️ DELETE PRODUCT - ID:', id);
+    
     API.deleteProduct(id).then(function(data) {
+        console.log('📥 Delete response:', data);
         if (data.success) {
             showToast('✅ Mahsulot o\'chirildi!', 'success');
             loadProductsTable();
         } else {
-            showToast('❌ Xatolik: ' + data.message, 'error');
+            showToast('❌ Xatolik: ' + (data.message || 'Noma\'lum xatolik'), 'error');
         }
+    }).catch(function(err) {
+        console.error('❌ Server xatosi:', err);
+        showToast('❌ Server xatosi: ' + err.message, 'error');
     });
 }
 
@@ -273,6 +318,8 @@ function deleteProduct(id) {
 // LOAD PRODUCTS TABLE
 // ============================================
 function loadProductsTable() {
+    console.log('🔄 Mahsulotlar jadvali yuklanmoqda...');
+    
     API.getProducts().then(function(data) {
         var tbody = document.getElementById('productsTableBody');
         if (!tbody) return;
@@ -310,6 +357,7 @@ function loadProductsTable() {
         });
         
         tbody.innerHTML = html;
+        console.log('✅ Mahsulotlar jadvali yangilandi, soni:', data.data.length);
     });
 }
 
@@ -328,3 +376,5 @@ if (typeof showToast === 'undefined') {
         }, 3000);
     }
 }
+
+console.log('✅ Products.js loaded');

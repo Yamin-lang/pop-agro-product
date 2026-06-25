@@ -17,7 +17,6 @@ let db = null;
 let pool = null;
 
 if (USE_POSTGRES) {
-    // PostgreSQL
     const { Pool } = require('pg');
     pool = new Pool({
         connectionString: process.env.DATABASE_URL,
@@ -25,7 +24,6 @@ if (USE_POSTGRES) {
     });
     console.log('✅ Using PostgreSQL');
 } else {
-    // SQLite
     const sqlite3 = require('sqlite3').verbose();
     db = new sqlite3.Database(path.join(__dirname, 'database.db'), function(err) {
         if (err) console.error('❌ Database connection error:', err.message);
@@ -43,64 +41,48 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// Statik fayllar
 app.use(express.static(path.join(__dirname, '../client')));
 
 console.log('✅ Middleware loaded');
 
 // ============================================
-// DATABASE FUNKSIYALARI (Ikkalasiga ham mos)
+// DATABASE FUNKSIYALARI
 // ============================================
 
-// Query funksiyasi - SQLite va PostgreSQL uchun
-function query(sql, params = []) {
+function query(sql, params) {
+    params = params || [];
     return new Promise(function(resolve, reject) {
         if (USE_POSTGRES) {
             pool.query(sql, params)
-                .then(function(result) {
-                    resolve(result.rows);
-                })
-                .catch(function(err) {
-                    reject(err);
-                });
+                .then(function(result) { resolve(result.rows); })
+                .catch(function(err) { reject(err); });
         } else {
             db.all(sql, params, function(err, rows) {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(rows);
-                }
+                if (err) reject(err);
+                else resolve(rows);
             });
         }
     });
 }
 
-// Get single row
-function queryOne(sql, params = []) {
+function queryOne(sql, params) {
+    params = params || [];
     return new Promise(function(resolve, reject) {
         if (USE_POSTGRES) {
             pool.query(sql, params)
-                .then(function(result) {
-                    resolve(result.rows[0] || null);
-                })
-                .catch(function(err) {
-                    reject(err);
-                });
+                .then(function(result) { resolve(result.rows[0] || null); })
+                .catch(function(err) { reject(err); });
         } else {
             db.get(sql, params, function(err, row) {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(row);
-                }
+                if (err) reject(err);
+                else resolve(row);
             });
         }
     });
 }
 
-// Run (insert, update, delete)
-function queryRun(sql, params = []) {
+function queryRun(sql, params) {
+    params = params || [];
     return new Promise(function(resolve, reject) {
         if (USE_POSTGRES) {
             pool.query(sql, params)
@@ -110,14 +92,11 @@ function queryRun(sql, params = []) {
                         changes: result.rowCount || 0
                     });
                 })
-                .catch(function(err) {
-                    reject(err);
-                });
+                .catch(function(err) { reject(err); });
         } else {
             db.run(sql, params, function(err) {
-                if (err) {
-                    reject(err);
-                } else {
+                if (err) reject(err);
+                else {
                     resolve({ 
                         lastID: this.lastID,
                         changes: this.changes
@@ -133,10 +112,9 @@ function queryRun(sql, params = []) {
 // ============================================
 async function createTables() {
     try {
-        let productsSQL, salesSQL, shiftsSQL, debtorsSQL, employeesSQL, returnsSQL;
+        var productsSQL, salesSQL, shiftsSQL, debtorsSQL, employeesSQL, returnsSQL;
         
         if (USE_POSTGRES) {
-            // PostgreSQL uchun
             productsSQL = `
                 CREATE TABLE IF NOT EXISTS products (
                     id SERIAL PRIMARY KEY,
@@ -217,7 +195,6 @@ async function createTables() {
                 )
             `;
         } else {
-            // SQLite uchun
             productsSQL = `
                 CREATE TABLE IF NOT EXISTS products (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -330,7 +307,7 @@ createTables();
 app.get('/api/products', async function(req, res) {
     console.log('📤 GET /api/products');
     try {
-        const rows = await query('SELECT * FROM products ORDER BY id DESC');
+        var rows = await query('SELECT * FROM products ORDER BY id DESC');
         res.json({ success: true, data: rows || [] });
     } catch (err) {
         console.error('Products error:', err);
@@ -340,21 +317,37 @@ app.get('/api/products', async function(req, res) {
 
 app.post('/api/products', async function(req, res) {
     console.log('📤 POST /api/products');
-    const { name, code, price, cost_price, quantity, unit, image, image_data } = req.body;
+    var name = req.body.name;
+    var code = req.body.code;
+    var price = req.body.price;
+    var cost_price = req.body.cost_price;
+    var quantity = req.body.quantity;
+    var unit = req.body.unit;
+    var image = req.body.image;
+    var image_data = req.body.image_data;
     
     if (!name || !price) {
         return res.status(400).json({ success: false, message: 'Nomi va narxi kiritilishi shart' });
     }
 
-    const imageToSave = image_data || image || '';
+    var imageToSave = image_data || image || '';
 
     try {
-        const result = await queryRun(
-            `INSERT INTO products (name, code, price, cost_price, quantity, unit, image) 
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [name, code || '', parseFloat(price) || 0, parseFloat(cost_price) || 0, parseFloat(quantity) || 0, unit || 'dona', imageToSave]
-        );
-        const row = await queryOne('SELECT * FROM products WHERE id = ?', [result.lastID]);
+        var result;
+        if (USE_POSTGRES) {
+            result = await queryRun(
+                `INSERT INTO products (name, code, price, cost_price, quantity, unit, image) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+                [name, code || '', parseFloat(price) || 0, parseFloat(cost_price) || 0, parseFloat(quantity) || 0, unit || 'dona', imageToSave]
+            );
+        } else {
+            result = await queryRun(
+                `INSERT INTO products (name, code, price, cost_price, quantity, unit, image) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [name, code || '', parseFloat(price) || 0, parseFloat(cost_price) || 0, parseFloat(quantity) || 0, unit || 'dona', imageToSave]
+            );
+        }
+        var row = await queryOne('SELECT * FROM products WHERE id = $1', [result.lastID]);
         res.json({ success: true, data: row });
     } catch (err) {
         console.error('Insert error:', err);
@@ -363,15 +356,28 @@ app.post('/api/products', async function(req, res) {
 });
 
 app.put('/api/products/:id', async function(req, res) {
-    const id = req.params.id;
-    const { name, code, price, cost_price, quantity, unit, image } = req.body;
+    var id = req.params.id;
+    var name = req.body.name;
+    var code = req.body.code;
+    var price = req.body.price;
+    var cost_price = req.body.cost_price;
+    var quantity = req.body.quantity;
+    var unit = req.body.unit;
+    var image = req.body.image;
 
     try {
-        await queryRun(
-            `UPDATE products SET name=?, code=?, price=?, cost_price=?, quantity=?, unit=?, image=? WHERE id=?`,
-            [name, code, parseFloat(price) || 0, parseFloat(cost_price) || 0, parseFloat(quantity) || 0, unit, image, id]
-        );
-        const row = await queryOne('SELECT * FROM products WHERE id = ?', [id]);
+        if (USE_POSTGRES) {
+            await queryRun(
+                `UPDATE products SET name=$1, code=$2, price=$3, cost_price=$4, quantity=$5, unit=$6, image=$7 WHERE id=$8`,
+                [name, code, parseFloat(price) || 0, parseFloat(cost_price) || 0, parseFloat(quantity) || 0, unit, image, id]
+            );
+        } else {
+            await queryRun(
+                `UPDATE products SET name=?, code=?, price=?, cost_price=?, quantity=?, unit=?, image=? WHERE id=?`,
+                [name, code, parseFloat(price) || 0, parseFloat(cost_price) || 0, parseFloat(quantity) || 0, unit, image, id]
+            );
+        }
+        var row = await queryOne('SELECT * FROM products WHERE id = $1', [id]);
         if (!row) {
             return res.status(404).json({ success: false, message: 'Mahsulot topilmadi' });
         }
@@ -383,84 +389,136 @@ app.put('/api/products/:id', async function(req, res) {
 });
 
 app.delete('/api/products/:id', async function(req, res) {
-    const id = req.params.id;
+    var id = req.params.id;
+    console.log('🗑️ DELETE /api/products/' + id);
+    
     try {
-        await queryRun('DELETE FROM products WHERE id = ?', [id]);
-        res.json({ success: true, message: 'Mahsulot o\'chirildi' });
+        var existing = await queryOne('SELECT * FROM products WHERE id = $1', [id]);
+        if (!existing) {
+            return res.status(404).json({ success: false, message: 'Mahsulot topilmadi' });
+        }
+        
+        if (USE_POSTGRES) {
+            await queryRun('DELETE FROM products WHERE id = $1', [id]);
+        } else {
+            await queryRun('DELETE FROM products WHERE id = ?', [id]);
+        }
+        
+        console.log('✅ Mahsulot o\'chirildi - ID:', id);
+        res.json({ success: true, message: 'Mahsulot o\'chirildi', data: { id: id } });
     } catch (err) {
-        console.error('Delete error:', err);
+        console.error('❌ Delete error:', err);
         res.status(500).json({ success: false, message: err.message });
     }
 });
 
 // ============================================
-// API - SALES
+// 🔥 API - SALES
 // ============================================
 app.post('/api/sales', async function(req, res) {
     console.log('📤 POST /api/sales');
-    const { items, total, discount, payment_type, shift_id, debtor } = req.body;
+    console.log('📦 Savdo ma\'lumotlari:', JSON.stringify(req.body, null, 2));
+    
+    var items = req.body.items;
+    var total = req.body.total;
+    var discount = req.body.discount;
+    var payment_type = req.body.payment_type;
+    var shift_id = req.body.shift_id;
+    var debtor = req.body.debtor;
 
     if (!items || items.length === 0) {
         return res.status(400).json({ success: false, message: 'Savatcha bo\'sh' });
     }
 
-    let saleIds = [];
+    var saleIds = [];
 
     try {
-        for (const item of items) {
-            const itemTotal = (item.price || 0) * (item.quantity || 0);
-            const result = await queryRun(
-                `INSERT INTO sales (product_id, quantity, price, total_price, discount, payment_type, shift_id) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [item.product_id, item.quantity || 0, item.price || 0, itemTotal, discount || 0, payment_type || 'cash', shift_id || null]
-            );
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            var itemTotal = (item.price || 0) * (item.quantity || 0);
+            
+            var result;
+            if (USE_POSTGRES) {
+                result = await queryRun(
+                    `INSERT INTO sales (product_id, quantity, price, total_price, discount, payment_type, shift_id) 
+                     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+                    [item.product_id, item.quantity || 0, item.price || 0, itemTotal, discount || 0, payment_type || 'cash', shift_id || null]
+                );
+            } else {
+                result = await queryRun(
+                    `INSERT INTO sales (product_id, quantity, price, total_price, discount, payment_type, shift_id) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                    [item.product_id, item.quantity || 0, item.price || 0, itemTotal, discount || 0, payment_type || 'cash', shift_id || null]
+                );
+            }
             saleIds.push(result.lastID);
             
-            await queryRun(
-                'UPDATE products SET quantity = quantity - ?, sales_count = sales_count + 1 WHERE id = ?',
-                [item.quantity || 0, item.product_id]
-            );
+            console.log('📦 KAMAYTIRISH - ID:', item.product_id, 'Miqdor:', item.quantity);
+            
+            var updateSql;
+            var updateParams;
+            
+            if (USE_POSTGRES) {
+                updateSql = 'UPDATE products SET quantity = quantity - $1, sales_count = sales_count + 1 WHERE id = $2';
+                updateParams = [item.quantity || 0, item.product_id];
+            } else {
+                updateSql = 'UPDATE products SET quantity = quantity - ?, sales_count = sales_count + 1 WHERE id = ?';
+                updateParams = [item.quantity || 0, item.product_id];
+            }
+            
+            var updateResult = await queryRun(updateSql, updateParams);
+            console.log('✅ Yangilandi:', updateResult.changes, 'qator');
+            
+            var updated = await queryOne('SELECT quantity FROM products WHERE id = $1', [item.product_id]);
+            console.log('✅ Yangi miqdor:', updated ? updated.quantity : 'N/A');
         }
 
         if (payment_type === 'credit' && debtor) {
-            await queryRun(
-                `INSERT INTO debtors (name, phone, address, amount, sale_id, is_paid) 
-                 VALUES (?, ?, ?, ?, ?, 0)`,
-                [debtor.name, debtor.phone || '', debtor.address || '', total || 0, saleIds[0] || null]
-            );
+            if (USE_POSTGRES) {
+                await queryRun(
+                    `INSERT INTO debtors (name, phone, address, amount, sale_id, is_paid) 
+                     VALUES ($1, $2, $3, $4, $5, 0)`,
+                    [debtor.name, debtor.phone || '', debtor.address || '', total || 0, saleIds[0] || null]
+                );
+            } else {
+                await queryRun(
+                    `INSERT INTO debtors (name, phone, address, amount, sale_id, is_paid) 
+                     VALUES (?, ?, ?, ?, ?, 0)`,
+                    [debtor.name, debtor.phone || '', debtor.address || '', total || 0, saleIds[0] || null]
+                );
+            }
         }
 
         res.json({ success: true, message: 'Savdo qabul qilindi', data: { saleIds: saleIds } });
     } catch (err) {
-        console.error('Sale error:', err);
+        console.error('❌ Sale error:', err);
         res.status(500).json({ success: false, message: err.message });
     }
 });
 
-// SALES DAILY - SHIFT_ID FILTER
 app.get('/api/sales/daily', async function(req, res) {
-    const date = req.query.date;
-    const shiftId = req.query.shift_id;
-    const queryDate = date || new Date().toISOString().split('T')[0];
+    var date = req.query.date;
+    var shiftId = req.query.shift_id;
+    var queryDate = date || new Date().toISOString().split('T')[0];
     console.log('📤 GET /api/sales/daily?date=' + queryDate + '&shift_id=' + shiftId);
 
-    let sql = `
+    var sql = `
         SELECT s.*, p.name as product_name 
         FROM sales s
         LEFT JOIN products p ON s.product_id = p.id
-        WHERE DATE(s.sale_date) = ?
+        WHERE DATE(s.sale_date) = $1
     `;
-    let params = [queryDate];
+    var params = [queryDate];
     
     if (shiftId) {
-        sql += ' AND s.shift_id = ?';
+        sql += ' AND s.shift_id = $2';
         params.push(shiftId);
     }
     
     sql += ' ORDER BY s.sale_date DESC';
     
     try {
-        const rows = await query(sql, params);
+        var rows = await query(sql, params);
         res.json({ success: true, data: rows || [] });
     } catch (err) {
         console.error('Daily sales error:', err);
@@ -468,25 +526,17 @@ app.get('/api/sales/daily', async function(req, res) {
     }
 });
 
-// SALES MONTHLY
 app.get('/api/sales/monthly', async function(req, res) {
-    const year = req.query.year;
-    const month = req.query.month;
-    const now = new Date();
-    const y = year || now.getFullYear();
-    const m = month || (now.getMonth() + 1);
-    const monthStr = String(m).padStart(2, '0');
+    var year = req.query.year;
+    var month = req.query.month;
+    var now = new Date();
+    var y = year || now.getFullYear();
+    var m = month || (now.getMonth() + 1);
+    var monthStr = String(m).padStart(2, '0');
     console.log('📤 GET /api/sales/monthly?year=' + y + '&month=' + m);
 
     try {
-        let sql = `
-            SELECT s.*, p.name as product_name 
-            FROM sales s
-            LEFT JOIN products p ON s.product_id = p.id
-            WHERE strftime('%Y', s.sale_date) = ? AND strftime('%m', s.sale_date) = ?
-            ORDER BY s.sale_date DESC
-        `;
-        // PostgreSQL uchun
+        var sql;
         if (USE_POSTGRES) {
             sql = `
                 SELECT s.*, p.name as product_name 
@@ -495,8 +545,16 @@ app.get('/api/sales/monthly', async function(req, res) {
                 WHERE EXTRACT(YEAR FROM s.sale_date) = $1 AND EXTRACT(MONTH FROM s.sale_date) = $2
                 ORDER BY s.sale_date DESC
             `;
+        } else {
+            sql = `
+                SELECT s.*, p.name as product_name 
+                FROM sales s
+                LEFT JOIN products p ON s.product_id = p.id
+                WHERE strftime('%Y', s.sale_date) = ? AND strftime('%m', s.sale_date) = ?
+                ORDER BY s.sale_date DESC
+            `;
         }
-        const rows = await query(sql, [String(y), monthStr]);
+        var rows = await query(sql, [String(y), monthStr]);
         res.json({ success: true, data: rows || [] });
     } catch (err) {
         console.error('Monthly sales error:', err);
@@ -510,14 +568,22 @@ app.get('/api/sales/monthly', async function(req, res) {
 
 app.post('/api/shifts/open', async function(req, res) {
     console.log('📤 POST /api/shifts/open');
-    const openingBalance = req.body.openingBalance;
+    var openingBalance = req.body.openingBalance;
 
     try {
-        const result = await queryRun(
-            'INSERT INTO shifts (opening_balance, is_active) VALUES (?, 1)',
-            [parseFloat(openingBalance) || 0]
-        );
-        const row = await queryOne('SELECT * FROM shifts WHERE id = ?', [result.lastID]);
+        var result;
+        if (USE_POSTGRES) {
+            result = await queryRun(
+                'INSERT INTO shifts (opening_balance, is_active) VALUES ($1, 1) RETURNING id',
+                [parseFloat(openingBalance) || 0]
+            );
+        } else {
+            result = await queryRun(
+                'INSERT INTO shifts (opening_balance, is_active) VALUES (?, 1)',
+                [parseFloat(openingBalance) || 0]
+            );
+        }
+        var row = await queryOne('SELECT * FROM shifts WHERE id = $1', [result.lastID]);
         res.json({ success: true, data: row });
     } catch (err) {
         console.error('Open shift error:', err);
@@ -525,20 +591,17 @@ app.post('/api/shifts/open', async function(req, res) {
     }
 });
 
-// Smena yopish
 app.post('/api/shifts/close', async function(req, res) {
     console.log('📤 POST /api/shifts/close');
-    const closingBalance = req.body.closingBalance;
+    var closingBalance = req.body.closingBalance;
     
     try {
-        // Joriy smenani olish
-        const shift = await queryOne('SELECT * FROM shifts WHERE is_active = 1 ORDER BY id DESC LIMIT 1');
+        var shift = await queryOne('SELECT * FROM shifts WHERE is_active = 1 ORDER BY id DESC LIMIT 1');
         if (!shift) {
             return res.status(404).json({ success: false, message: 'Aktiv smena topilmadi' });
         }
         
-        // Savdolarni hisoblash
-        let reportSql = `
+        var reportSql = `
             SELECT 
                 COUNT(*) as total_sales,
                 COALESCE(SUM(total_price), 0) as total_amount,
@@ -546,35 +609,61 @@ app.post('/api/shifts/close', async function(req, res) {
                 COALESCE(SUM(CASE WHEN payment_type = 'terminal' THEN total_price ELSE 0 END), 0) as terminal_amount,
                 COALESCE(SUM(CASE WHEN payment_type = 'credit' THEN total_price ELSE 0 END), 0) as credit_amount
             FROM sales
-            WHERE shift_id = ?
+            WHERE shift_id = $1
         `;
-        const report = await queryOne(reportSql, [shift.id]);
+        var report = await queryOne(reportSql, [shift.id]);
         
-        // Smenani yopish
-        await queryRun(
-            `UPDATE shifts SET 
-                closing_balance = ?, 
-                closed_at = CURRENT_TIMESTAMP, 
-                is_active = 0,
-                total_sales = ?,
-                total_amount = ?,
-                cash_amount = ?,
-                terminal_amount = ?,
-                credit_amount = ?
-            WHERE id = ?`,
-            [
-                parseFloat(closingBalance) || 0,
-                report.total_sales || 0,
-                report.total_amount || 0,
-                report.cash_amount || 0,
-                report.terminal_amount || 0,
-                report.credit_amount || 0,
-                shift.id
-            ]
-        );
+        if (USE_POSTGRES) {
+            await queryRun(
+                `UPDATE shifts SET 
+                    closing_balance = $1, 
+                    closed_at = CURRENT_TIMESTAMP, 
+                    is_active = 0,
+                    total_sales = $2,
+                    total_amount = $3,
+                    cash_amount = $4,
+                    terminal_amount = $5,
+                    credit_amount = $6
+                WHERE id = $7`,
+                [
+                    parseFloat(closingBalance) || 0,
+                    report.total_sales || 0,
+                    report.total_amount || 0,
+                    report.cash_amount || 0,
+                    report.terminal_amount || 0,
+                    report.credit_amount || 0,
+                    shift.id
+                ]
+            );
+        } else {
+            await queryRun(
+                `UPDATE shifts SET 
+                    closing_balance = ?, 
+                    closed_at = CURRENT_TIMESTAMP, 
+                    is_active = 0,
+                    total_sales = ?,
+                    total_amount = ?,
+                    cash_amount = ?,
+                    terminal_amount = ?,
+                    credit_amount = ?
+                WHERE id = ?`,
+                [
+                    parseFloat(closingBalance) || 0,
+                    report.total_sales || 0,
+                    report.total_amount || 0,
+                    report.cash_amount || 0,
+                    report.terminal_amount || 0,
+                    report.credit_amount || 0,
+                    shift.id
+                ]
+            );
+        }
         
-        // Savdo jadvalini tozalash
-        await queryRun('DELETE FROM sales WHERE shift_id = ?', [shift.id]);
+        if (USE_POSTGRES) {
+            await queryRun('DELETE FROM sales WHERE shift_id = $1', [shift.id]);
+        } else {
+            await queryRun('DELETE FROM sales WHERE shift_id = ?', [shift.id]);
+        }
         
         res.json({ 
             success: true, 
@@ -594,7 +683,7 @@ app.post('/api/shifts/close', async function(req, res) {
 app.get('/api/shifts/current', async function(req, res) {
     console.log('📤 GET /api/shifts/current');
     try {
-        const row = await queryOne('SELECT * FROM shifts WHERE is_active = 1 ORDER BY id DESC LIMIT 1');
+        var row = await queryOne('SELECT * FROM shifts WHERE is_active = 1 ORDER BY id DESC LIMIT 1');
         res.json({ success: true, data: row || null });
     } catch (err) {
         console.error('Current shift error:', err);
@@ -602,11 +691,10 @@ app.get('/api/shifts/current', async function(req, res) {
     }
 });
 
-// 🔥 SHIFTS HISTORY - TUZATILGAN
 app.get('/api/shifts/history', async function(req, res) {
     console.log('📤 GET /api/shifts/history');
     try {
-        const rows = await query(`
+        var rows = await query(`
             SELECT 
                 id,
                 opening_balance,
@@ -639,7 +727,7 @@ app.get('/api/shifts/history', async function(req, res) {
 app.get('/api/debtors', async function(req, res) {
     console.log('📤 GET /api/debtors');
     try {
-        const rows = await query('SELECT * FROM debtors WHERE is_paid = 0 ORDER BY created_at DESC');
+        var rows = await query('SELECT * FROM debtors WHERE is_paid = 0 ORDER BY created_at DESC');
         res.json({ success: true, data: rows || [] });
     } catch (err) {
         console.error('Debtors error:', err);
@@ -648,23 +736,30 @@ app.get('/api/debtors', async function(req, res) {
 });
 
 app.post('/api/debtors/:id/pay', async function(req, res) {
-    const id = req.params.id;
-    const amount = req.body.amount;
+    var id = req.params.id;
+    var amount = req.body.amount;
     console.log('📤 POST /api/debtors/' + id + '/pay');
 
     try {
-        const debtor = await queryOne('SELECT * FROM debtors WHERE id = ?', [id]);
+        var debtor = await queryOne('SELECT * FROM debtors WHERE id = $1', [id]);
         if (!debtor) {
             return res.status(404).json({ success: false, message: 'Qarzdor topilmadi' });
         }
 
-        const newAmount = Math.max(0, (debtor.amount || 0) - (parseFloat(amount) || 0));
-        const isPaid = newAmount <= 0 ? 1 : 0;
+        var newAmount = Math.max(0, (debtor.amount || 0) - (parseFloat(amount) || 0));
+        var isPaid = newAmount <= 0 ? 1 : 0;
 
-        await queryRun(
-            'UPDATE debtors SET amount = ?, is_paid = ?, paid_at = CURRENT_TIMESTAMP WHERE id = ?',
-            [newAmount, isPaid, id]
-        );
+        if (USE_POSTGRES) {
+            await queryRun(
+                'UPDATE debtors SET amount = $1, is_paid = $2, paid_at = CURRENT_TIMESTAMP WHERE id = $3',
+                [newAmount, isPaid, id]
+            );
+        } else {
+            await queryRun(
+                'UPDATE debtors SET amount = ?, is_paid = ?, paid_at = CURRENT_TIMESTAMP WHERE id = ?',
+                [newAmount, isPaid, id]
+            );
+        }
         res.json({ success: true, message: 'Qarz to\'landi', data: { remaining: newAmount } });
     } catch (err) {
         console.error('Pay debt error:', err);
@@ -676,12 +771,12 @@ app.post('/api/debtors/:id/pay', async function(req, res) {
 // API - REPORTS
 // ============================================
 app.get('/api/reports/daily', async function(req, res) {
-    const date = req.query.date;
-    const queryDate = date || new Date().toISOString().split('T')[0];
+    var date = req.query.date;
+    var queryDate = date || new Date().toISOString().split('T')[0];
     console.log('📤 GET /api/reports/daily?date=' + queryDate);
 
     try {
-        const row = await queryOne(`
+        var row = await queryOne(`
             SELECT 
                 COUNT(*) as total_sales,
                 COALESCE(SUM(total_price), 0) as total_amount,
@@ -689,7 +784,7 @@ app.get('/api/reports/daily', async function(req, res) {
                 COALESCE(SUM(CASE WHEN payment_type = 'terminal' THEN total_price ELSE 0 END), 0) as terminal_amount,
                 COALESCE(SUM(CASE WHEN payment_type = 'credit' THEN total_price ELSE 0 END), 0) as credit_amount
             FROM sales
-            WHERE DATE(sale_date) = ?
+            WHERE DATE(sale_date) = $1
         `, [queryDate]);
         res.json({ success: true, data: row || { total_sales: 0, total_amount: 0 } });
     } catch (err) {
@@ -704,7 +799,7 @@ app.get('/api/reports/daily', async function(req, res) {
 app.get('/api/employees', async function(req, res) {
     console.log('📤 GET /api/employees');
     try {
-        const rows = await query('SELECT id, name, email, position, phone FROM employees ORDER BY id DESC');
+        var rows = await query('SELECT id, name, email, position, phone FROM employees ORDER BY id DESC');
         res.json({ success: true, data: rows || [] });
     } catch (err) {
         console.error('Employees error:', err);
@@ -714,18 +809,30 @@ app.get('/api/employees', async function(req, res) {
 
 app.post('/api/employees', async function(req, res) {
     console.log('📤 POST /api/employees');
-    const { name, email, password, position, phone } = req.body;
+    var name = req.body.name;
+    var email = req.body.email;
+    var password = req.body.password;
+    var position = req.body.position;
+    var phone = req.body.phone;
     
     if (!name || !email) {
         return res.status(400).json({ success: false, message: 'Ism va email kiritilishi shart' });
     }
 
     try {
-        const result = await queryRun(
-            'INSERT INTO employees (name, email, password, position, phone) VALUES (?, ?, ?, ?, ?)',
-            [name, email, password || '123456', position || '', phone || '']
-        );
-        const row = await queryOne('SELECT id, name, email, position, phone FROM employees WHERE id = ?', [result.lastID]);
+        var result;
+        if (USE_POSTGRES) {
+            result = await queryRun(
+                'INSERT INTO employees (name, email, password, position, phone) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+                [name, email, password || '123456', position || '', phone || '']
+            );
+        } else {
+            result = await queryRun(
+                'INSERT INTO employees (name, email, password, position, phone) VALUES (?, ?, ?, ?, ?)',
+                [name, email, password || '123456', position || '', phone || '']
+            );
+        }
+        var row = await queryOne('SELECT id, name, email, position, phone FROM employees WHERE id = $1', [result.lastID]);
         res.json({ success: true, data: row });
     } catch (err) {
         console.error('Add employee error:', err);
@@ -734,10 +841,14 @@ app.post('/api/employees', async function(req, res) {
 });
 
 app.delete('/api/employees/:id', async function(req, res) {
-    const id = req.params.id;
+    var id = req.params.id;
     console.log('📤 DELETE /api/employees/' + id);
     try {
-        await queryRun('DELETE FROM employees WHERE id = ?', [id]);
+        if (USE_POSTGRES) {
+            await queryRun('DELETE FROM employees WHERE id = $1', [id]);
+        } else {
+            await queryRun('DELETE FROM employees WHERE id = ?', [id]);
+        }
         res.json({ success: true, message: 'Xodim o\'chirildi' });
     } catch (err) {
         console.error('Delete employee error:', err);
@@ -751,7 +862,13 @@ app.delete('/api/employees/:id', async function(req, res) {
 
 app.post('/api/returns', async function(req, res) {
     console.log('📤 POST /api/returns');
-    const { sale_id, product_id, quantity, price, total_price, reason, returned_by } = req.body;
+    var sale_id = req.body.sale_id;
+    var product_id = req.body.product_id;
+    var quantity = req.body.quantity;
+    var price = req.body.price;
+    var total_price = req.body.total_price;
+    var reason = req.body.reason;
+    var returned_by = req.body.returned_by;
     
     if (!product_id || !quantity) {
         return res.status(400).json({ 
@@ -761,36 +878,57 @@ app.post('/api/returns', async function(req, res) {
     }
     
     try {
-        // Mahsulotni tekshirish
-        const product = await queryOne('SELECT * FROM products WHERE id = ?', [product_id]);
+        var product = await queryOne('SELECT * FROM products WHERE id = $1', [product_id]);
         if (!product) {
             return res.status(404).json({ success: false, message: 'Mahsulot topilmadi' });
         }
         
-        const newQuantity = (product.quantity || 0) + parseFloat(quantity);
+        var newQuantity = (product.quantity || 0) + parseFloat(quantity);
         
-        // Qaytarishni saqlash
-        const result = await queryRun(
-            `INSERT INTO returns (sale_id, product_id, quantity, price, total_price, reason, returned_by) 
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [
-                sale_id || null, 
-                product_id, 
-                parseFloat(quantity), 
-                parseFloat(price) || parseFloat(product.price), 
-                parseFloat(total_price) || (parseFloat(price) || parseFloat(product.price)) * parseFloat(quantity), 
-                reason || 'Boshqa', 
-                returned_by || 'Admin'
-            ]
-        );
+        var result;
+        if (USE_POSTGRES) {
+            result = await queryRun(
+                `INSERT INTO returns (sale_id, product_id, quantity, price, total_price, reason, returned_by) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+                [
+                    sale_id || null, 
+                    product_id, 
+                    parseFloat(quantity), 
+                    parseFloat(price) || parseFloat(product.price), 
+                    parseFloat(total_price) || (parseFloat(price) || parseFloat(product.price)) * parseFloat(quantity), 
+                    reason || 'Boshqa', 
+                    returned_by || 'Admin'
+                ]
+            );
+        } else {
+            result = await queryRun(
+                `INSERT INTO returns (sale_id, product_id, quantity, price, total_price, reason, returned_by) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    sale_id || null, 
+                    product_id, 
+                    parseFloat(quantity), 
+                    parseFloat(price) || parseFloat(product.price), 
+                    parseFloat(total_price) || (parseFloat(price) || parseFloat(product.price)) * parseFloat(quantity), 
+                    reason || 'Boshqa', 
+                    returned_by || 'Admin'
+                ]
+            );
+        }
         
-        // Mahsulot sonini omborga qaytarish
-        await queryRun(
-            'UPDATE products SET quantity = ? WHERE id = ?',
-            [newQuantity, product_id]
-        );
+        if (USE_POSTGRES) {
+            await queryRun(
+                'UPDATE products SET quantity = $1 WHERE id = $2',
+                [newQuantity, product_id]
+            );
+        } else {
+            await queryRun(
+                'UPDATE products SET quantity = ? WHERE id = ?',
+                [newQuantity, product_id]
+            );
+        }
         
-        const row = await queryOne('SELECT * FROM returns WHERE id = ?', [result.lastID]);
+        var row = await queryOne('SELECT * FROM returns WHERE id = $1', [result.lastID]);
         res.json({ 
             success: true, 
             message: 'Mahsulot qaytarib olindi va omborga qo\'shildi!',
@@ -811,17 +949,17 @@ app.post('/api/returns', async function(req, res) {
 });
 
 app.get('/api/returns', async function(req, res) {
-    const date = req.query.date;
-    const queryDate = date || new Date().toISOString().split('T')[0];
+    var date = req.query.date;
+    var queryDate = date || new Date().toISOString().split('T')[0];
     console.log('📤 GET /api/returns?date=' + queryDate);
     
     try {
-        const rows = await query(`
+        var rows = await query(`
             SELECT r.*, p.name as product_name, s.sale_date as original_sale_date
             FROM returns r
             LEFT JOIN products p ON r.product_id = p.id
             LEFT JOIN sales s ON r.sale_id = s.id
-            WHERE DATE(r.return_date) = ?
+            WHERE DATE(r.return_date) = $1
             ORDER BY r.return_date DESC
         `, [queryDate]);
         res.json({ success: true, data: rows || [] });
@@ -834,7 +972,7 @@ app.get('/api/returns', async function(req, res) {
 app.get('/api/returns/all', async function(req, res) {
     console.log('📤 GET /api/returns/all');
     try {
-        const rows = await query(`
+        var rows = await query(`
             SELECT r.*, p.name as product_name, s.sale_date as original_sale_date
             FROM returns r
             LEFT JOIN products p ON r.product_id = p.id
@@ -871,7 +1009,6 @@ app.listen(PORT, function() {
     console.log('='.repeat(50));
 });
 
-// Xatoliklarni ushlash
 process.on('uncaughtException', function(err) {
     console.error('❌ Uncaught Exception:', err.message);
 });

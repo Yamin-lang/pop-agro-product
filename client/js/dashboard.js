@@ -1,9 +1,6 @@
 // ============================================
-// DASHBOARD.JS - REAL VAQTDA YANGILANISH
+// DASHBOARD.JS - FAQAT BOSGANDA YANGILANADI (TEZ)
 // ============================================
-
-var dashboardInterval = null;
-var isDashboardActive = false;
 
 function loadDashboard(container) {
     if (!container) return;
@@ -56,7 +53,14 @@ function loadDashboard(container) {
                 </div>
             </div>
             
-            <!-- 🔥 SMENA HOLATI -->
+            <!-- YANGILASH TUGMASI -->
+            <div style="display:flex;justify-content:flex-end;margin-bottom:15px;">
+                <button onclick="refreshDashboard()" class="btn btn-primary" style="display:flex;align-items:center;gap:8px;padding:10px 20px;">
+                    <i class="fas fa-sync"></i> Yangilash
+                </button>
+            </div>
+            
+            <!-- SMENA HOLATI -->
             <div class="dashboard-card" style="border-left: 4px solid #f59e0b; margin-bottom:20px;">
                 <div class="card-header">
                     <h3><i class="fas fa-clock"></i> Smena holati</h3>
@@ -100,95 +104,104 @@ function loadDashboard(container) {
         </div>
     `;
     
-    startRealtimeUpdates();
-}
-
-// ============================================
-// REAL VAQTDA YANGILASH
-// ============================================
-function startRealtimeUpdates() {
-    if (dashboardInterval) {
-        clearInterval(dashboardInterval);
-        dashboardInterval = null;
-    }
-    
-    isDashboardActive = true;
+    // FAQAT BIR MARTA YUKLANADI
     loadDashboardData();
-    
-    dashboardInterval = setInterval(function() {
-        if (isDashboardActive) {
-            loadDashboardData();
-        }
-    }, 3000);
-    
-    console.log('🔄 Dashboard real vaqt rejimida ishlamoqda (3s)');
-}
-
-function stopDashboardUpdates() {
-    isDashboardActive = false;
-    if (dashboardInterval) {
-        clearInterval(dashboardInterval);
-        dashboardInterval = null;
-        console.log('⏹ Dashboard updates stopped');
-    }
+    console.log('✅ Dashboard yuklandi (faqat qo\'lda yangilash)');
 }
 
 // ============================================
-// LOAD DASHBOARD DATA - REAL VAQTDA
+// QO'LDA YANGILASH FUNKSIYASI
+// ============================================
+function refreshDashboard() {
+    console.log('🔄 Dashboard yangilash boshlandi...');
+    
+    var btn = document.querySelector('.btn-primary i');
+    if (btn) {
+        btn.style.animation = 'spin 0.5s linear';
+        setTimeout(function() {
+            btn.style.animation = '';
+        }, 500);
+    }
+    
+    loadDashboardData();
+    showToast('✅ Dashboard yangilandi', 'success');
+}
+
+// ============================================
+// ANIMATSIYA
+// ============================================
+(function addStyles() {
+    var style = document.createElement('style');
+    style.textContent = `
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(style);
+})();
+
+// ============================================
+// LOAD DASHBOARD DATA
 // ============================================
 function loadDashboardData() {
+    console.log('📊 Dashboard ma\'lumotlari yuklanmoqda...');
+    
     var today = new Date().toISOString().split('T')[0];
     var now = new Date();
     var month = now.getMonth() + 1;
     var year = now.getFullYear();
     
-    // 🔥 JORIY SMENANI TEKSHIRISH
+    // JORIY SMENANI TEKSHIRISH
     API.getCurrentShift().then(function(shiftData) {
+        console.log('📥 Smena holati:', shiftData);
+        
         var isShiftActive = shiftData.success && shiftData.data;
         var shiftId = isShiftActive ? shiftData.data.id : null;
         
         // SMENA HOLATINI YANGILASH
         updateShiftStatus(shiftData, isShiftActive);
         
-        // 🔥 1. KUNLIK SAVDO - FAQAT JORIY SMENA UCHUN
+        // 1. KUNLIK SAVDO
         if (isShiftActive && shiftId) {
             var url = API_BASE + '/sales/daily?date=' + today + '&shift_id=' + shiftId;
+            console.log('📤 Kunlik savdo so\'rovi:', url);
+            
             fetch(url)
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
+                    console.log('📥 Kunlik savdo javobi:', data);
                     if (data.success) {
                         updateDailyStats(data.data);
                     }
                 })
                 .catch(function(err) {
-                    console.error('Sales error:', err);
+                    console.error('❌ Sales error:', err);
                 });
         } else {
-            // 🔥 SMENA YOPIQ - KUNLIK SAVDO 0
             resetDailyStats();
         }
         
-        // 🔥 2. OYLIK SAVDO - DOIMIY 1 OYLIK (smena holatidan qat'iy nazar)
-        // BARCHA SAVDOLARDAN (yopilgan + ochiq) 1 oylik hisoblanadi
+        // 2. OYLIK SAVDO
         API.getMonthlySales(year, month).then(function(data) {
+            console.log('📥 Oylik savdo javobi:', data);
             if (data.success && data.data) {
                 var total = data.data.reduce(function(s, item) { return s + (item.total_price || 0); }, 0);
                 var elMonthly = document.getElementById('statMonthly');
                 if (elMonthly) {
-                    // 🔥 Oylik savdo doimiy ko'rinadi
                     var monthNames = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'];
                     elMonthly.textContent = total.toLocaleString() + ' so\'m (' + monthNames[month - 1] + ')';
                     elMonthly.style.color = '#e74c3c';
                 }
             }
         }).catch(function(err) {
-            console.error('Monthly error:', err);
+            console.error('❌ Monthly error:', err);
         });
         
         // Mahsulotlar soni
         loadProductsCount();
     }).catch(function(err) {
-        console.error('Shift check error:', err);
+        console.error('❌ Shift check error:', err);
     });
 }
 
@@ -276,14 +289,17 @@ function resetDailyStats() {
 // MAHSULOTLAR SONI
 // ============================================
 function loadProductsCount() {
+    console.log('📦 Mahsulotlar soni yuklanmoqda...');
+    
     API.getProducts().then(function(data) {
+        console.log('📥 Mahsulotlar soni:', data.data ? data.data.length : 0);
         if (data.success && data.data) {
             var elProducts = document.getElementById('statProducts');
             if (elProducts) elProducts.textContent = data.data.length;
             analyzeProducts(data.data);
         }
     }).catch(function(err) {
-        console.error('Products error:', err);
+        console.error('❌ Products error:', err);
     });
 }
 
@@ -338,3 +354,8 @@ function renderProductList(elementId, products, label) {
     
     container.innerHTML = html;
 }
+
+// ============================================
+// DASHBOARD YAKUNLANDI
+// ============================================
+console.log('✅ Dashboard.js loaded - faqat qo\'lda yangilash');
