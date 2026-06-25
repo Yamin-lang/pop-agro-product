@@ -3,14 +3,20 @@
 // ============================================
 
 // ============================================
-// 🔥 API BASE - QO'LDA SOZLANGAN
+// 🔥 API BASE - AVTOMATIK ANIQLASH
 // ============================================
-var API_BASE = 'https://pop-agro-product.vercel.app/api';
-
-// Agar localhost da bo'lsa
-if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    API_BASE = 'http://localhost:5000/api';
-}
+var API_BASE = (function() {
+    // Agar Vercel da bo'lsa
+    if (window.location.hostname.includes('vercel.app')) {
+        return window.location.origin + '/api';
+    }
+    // Agar localhost da bo'lsa
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:5000/api';
+    }
+    // Agar boshqa domain bo'lsa
+    return window.location.origin + '/api';
+})();
 
 // Global qilish
 window.API_BASE = API_BASE;
@@ -142,12 +148,9 @@ var API = {
         });
     },
     
-    getSales: function(date, shiftId) {
+    getSales: function(date) {
         var queryDate = date || new Date().toISOString().split('T')[0];
         var url = API_BASE + '/sales/daily?date=' + queryDate;
-        if (shiftId) {
-            url += '&shift_id=' + shiftId;
-        }
         console.log('📤 API.getSales - URL:', url);
         return fetch(url)
             .then(function(r) {
@@ -158,6 +161,7 @@ var API = {
                 return r.json();
             })
             .then(function(data) {
+                console.log('📥 Sales count:', data.data ? data.data.length : 0);
                 return data;
             })
             .catch(function(err) {

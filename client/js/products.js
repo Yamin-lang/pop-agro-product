@@ -3,13 +3,27 @@
 // ============================================
 
 // ============================================
-// 🔥 API_BASE ni tekshirish
+// 🔥 API_BASE ni tekshirish va sozlash
 // ============================================
 if (typeof API_BASE === 'undefined') {
-    var API_BASE = 'https://pop-agro-product.vercel.app/api';
+    var API_BASE = (function() {
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            return 'http://localhost:5000/api';
+        }
+        if (window.location.hostname.includes('vercel.app')) {
+            return window.location.origin + '/api';
+        }
+        return window.location.origin + '/api';
+    })();
     console.log('📦 API_BASE set in products.js:', API_BASE);
 } else {
-    console.log('📦 API_BASE from api.js:', API_BASE);
+    console.log('📦 API_BASE from global:', API_BASE);
+}
+
+// 🔥 API_BASE ni qayta tekshirish - agar /api bo'lmasa qo'shish
+if (API_BASE && !API_BASE.includes('/api') && !API_BASE.endsWith('/api')) {
+    API_BASE = API_BASE + '/api';
+    console.log('📦 API_BASE fixed:', API_BASE);
 }
 
 var editingProductId = null;
@@ -214,7 +228,7 @@ function saveProduct() {
 }
 
 // ============================================
-// SEND PRODUCT - 🔥 TUZATILGAN!
+// SEND PRODUCT - TUZATILGAN!
 // ============================================
 function sendProduct(data) {
     var method = editingProductId ? 'PUT' : 'POST';
@@ -351,7 +365,7 @@ function deleteProduct(id) {
 }
 
 // ============================================
-// LOAD PRODUCTS TABLE - 🔥 TUZATILGAN!
+// LOAD PRODUCTS TABLE - TUZATILGAN!
 // ============================================
 function loadProductsTable() {
     var url = API_BASE + '/products';
@@ -428,6 +442,59 @@ function escapeHtml(text) {
     var div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// ============================================
+// POS MAHSULOTLARINI YUKLASH
+// ============================================
+function loadPOSProducts() {
+    console.log('📤 POS mahsulotlar yuklanmoqda...');
+    
+    var url = API_BASE + '/products';
+    fetch(url)
+        .then(function(r) {
+            console.log('📥 Response status:', r.status);
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
+        .then(function(data) {
+            console.log('📥 POS mahsulotlar yuklandi, soni:', data.data ? data.data.length : 0);
+            renderPOSProducts(data.data || []);
+        })
+        .catch(function(err) {
+            console.error('❌ Load POS products error:', err);
+        });
+}
+
+// ============================================
+// RENDER POS PRODUCTS
+// ============================================
+function renderPOSProducts(products) {
+    var container = document.getElementById('posProductGrid');
+    if (!container) return;
+    
+    if (!products || products.length === 0) {
+        container.innerHTML = '<div class="empty-state">📭 Mahsulotlar mavjud emas</div>';
+        return;
+    }
+    
+    var html = '';
+    products.forEach(function(p) {
+        html += '<div class="pos-product" onclick="addToCart(' + p.id + ')">';
+        html += '<div class="product-image">';
+        if (p.image) {
+            html += '<img src="' + p.image + '" alt="' + p.name + '">';
+        } else {
+            html += '<i class="fas fa-box"></i>';
+        }
+        html += '</div>';
+        html += '<div class="product-name">' + escapeHtml(p.name || 'N/A') + '</div>';
+        html += '<div class="product-price">' + (p.price || 0).toLocaleString() + ' so\'m</div>';
+        html += '<div class="product-qty">' + (p.quantity || 0) + ' dona</div>';
+        html += '</div>';
+    });
+    
+    container.innerHTML = html;
 }
 
 // ============================================

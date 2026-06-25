@@ -1,17 +1,40 @@
 // ============================================
-// MAIN.JS - ISHGA TUSHIRISH
+// MAIN.JS - ISHGA TUSHIRISH (TO'LIQ TUZATILGAN)
 // ============================================
+
+// ============================================
+// 🔥 API_BASE ni tekshirish
+// ============================================
+if (typeof API_BASE === 'undefined') {
+    var API_BASE = (function() {
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            return 'http://localhost:5000/api';
+        }
+        if (window.location.hostname.includes('vercel.app')) {
+            return window.location.origin + '/api';
+        }
+        return window.location.origin + '/api';
+    })();
+    console.log('📦 API_BASE set in main.js:', API_BASE);
+} else {
+    console.log('📦 API_BASE from global:', API_BASE);
+}
 
 // ============================================
 // LOGIN
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Main.js loaded - DOM ready');
+    console.log('📦 API_BASE:', API_BASE);
+    
     var loginForm = document.getElementById('loginForm');
     if (loginForm) {
         loginForm.addEventListener('submit', function(e) {
             e.preventDefault();
             var email = document.getElementById('loginEmail').value;
             var password = document.getElementById('loginPassword').value;
+            
+            console.log('📤 Login attempt - Email:', email);
             
             if (email === 'admin@example.com' && password === '123456') {
                 localStorage.setItem('token', 'demo-token-' + Date.now());
@@ -22,6 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 var errorEl = document.getElementById('loginError');
                 if (errorEl) errorEl.style.display = 'block';
+                console.log('❌ Login failed');
             }
         });
     }
@@ -35,7 +59,10 @@ document.addEventListener('DOMContentLoaded', function() {
 function checkLogin() {
     var token = localStorage.getItem('token');
     if (token) {
+        console.log('✅ Token found, showing app');
         showApp();
+    } else {
+        console.log('🔴 No token found, showing login');
     }
 }
 
@@ -54,6 +81,8 @@ function showApp() {
 // INIT APP
 // ============================================
 function initApp() {
+    console.log('🔄 Initializing app...');
+    
     var user = JSON.parse(localStorage.getItem('user') || '{"name":"Admin"}');
     var userName = document.getElementById('userName');
     var userAvatar = document.getElementById('userAvatar');
@@ -86,6 +115,7 @@ function initApp() {
                 <span>Sozlamalar</span>
             </div>
         `;
+        console.log('✅ Menu loaded');
     }
     
     // Menu click
@@ -96,6 +126,7 @@ function initApp() {
             });
             this.classList.add('active');
             var page = this.dataset.page;
+            console.log('📄 Menu clicked - page:', page);
             loadPage(page);
         });
     });
@@ -105,11 +136,17 @@ function initApp() {
 }
 
 // ============================================
-// LOAD PAGE
+// LOAD PAGE - TUZATILGAN
 // ============================================
 function loadPage(page) {
     var content = document.getElementById('pageContent');
-    if (!content) return;
+    if (!content) {
+        console.error('❌ pageContent element not found');
+        return;
+    }
+    
+    console.log('📄 Loading page:', page);
+    console.log('📦 API_BASE:', API_BASE);
     
     var titles = {
         dashboard: 'Dashboard <span>Asosiy ko\'rsatkichlar</span>',
@@ -128,42 +165,47 @@ function loadPage(page) {
                 if (typeof loadDashboard === 'function') {
                     loadDashboard(content);
                 } else {
-                    content.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Dashboard yuklanmoqda...</p></div>';
+                    content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Dashboard yuklanmoqda...</p></div>';
+                    console.warn('⚠️ loadDashboard function not found');
                 }
                 break;
             case 'pos':
                 if (typeof loadPOS === 'function') {
                     loadPOS(content);
                 } else {
-                    content.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Kassa yuklanmoqda...</p></div>';
+                    content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Kassa yuklanmoqda...</p></div>';
+                    console.warn('⚠️ loadPOS function not found');
                 }
                 break;
             case 'products':
                 if (typeof loadProducts === 'function') {
                     loadProducts(content);
                 } else {
-                    content.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Ombor yuklanmoqda...</p></div>';
+                    content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Ombor yuklanmoqda...</p></div>';
+                    console.warn('⚠️ loadProducts function not found');
                 }
                 break;
             case 'reports':
                 if (typeof loadReports === 'function') {
                     loadReports(content);
                 } else {
-                    content.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Hisobotlar yuklanmoqda...</p></div>';
+                    content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Hisobotlar yuklanmoqda...</p></div>';
+                    console.warn('⚠️ loadReports function not found');
                 }
                 break;
             case 'settings':
                 if (typeof loadSettings === 'function') {
                     loadSettings(content);
                 } else {
-                    content.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Sozlamalar yuklanmoqda...</p></div>';
+                    content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Sozlamalar yuklanmoqda...</p></div>';
+                    console.warn('⚠️ loadSettings function not found');
                 }
                 break;
             default:
                 content.innerHTML = '<div class="loading"><i class="fas fa-exclamation-triangle"></i><p>Sahifa topilmadi</p></div>';
         }
     } catch(e) {
-        console.error('Page load error:', e);
+        console.error('❌ Page load error:', e);
         content.innerHTML = '<div class="loading"><i class="fas fa-exclamation-triangle"></i><p>Xatolik yuz berdi: ' + e.message + '</p></div>';
     }
 }
@@ -180,16 +222,42 @@ function logout() {
 }
 
 // ============================================
-// TOAST NOTIFICATION
+// TOAST NOTIFICATION - TUZATILGAN
 // ============================================
 function showToast(message, type) {
     type = type || 'success';
+    console.log('📤 Toast:', message, 'Type:', type);
+    
     var toast = document.createElement('div');
     toast.className = 'toast ' + type;
-    toast.textContent = message;
+    
+    var icons = {
+        success: '✅ ',
+        error: '❌ ',
+        warning: '⚠️ ',
+        info: 'ℹ️ '
+    };
+    toast.textContent = (icons[type] || 'ℹ️ ') + message;
+    
+    // Stilni qo'llash
+    toast.style.cssText = 'position:fixed;bottom:30px;right:30px;padding:14px 24px;border-radius:10px;color:#fff;font-weight:500;z-index:9999;animation:slideIn 0.4s ease;box-shadow:0 10px 40px rgba(0,0,0,0.2);font-size:14px;max-width:400px;';
+    
+    var colors = {
+        success: '#22c55e',
+        error: '#ef4444',
+        warning: '#f59e0b',
+        info: '#4f46e5'
+    };
+    toast.style.background = colors[type] || '#4f46e5';
+    
     document.body.appendChild(toast);
     setTimeout(function() {
-        if (toast.parentNode) toast.remove();
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(30px)';
+        toast.style.transition = 'all 0.4s ease';
+        setTimeout(function() {
+            if (toast.parentNode) toast.remove();
+        }, 400);
     }, 3000);
 }
 
@@ -197,10 +265,18 @@ function showToast(message, type) {
 // GLOBAL FUNKSIYALAR (Boshqa fayllar uchun)
 // ============================================
 window.refreshDashboard = function() {
+    console.log('🔄 refreshDashboard called');
     if (typeof loadDashboardData === 'function') {
         loadDashboardData();
         showToast('✅ Dashboard yangilandi', 'success');
+    } else {
+        console.warn('⚠️ loadDashboardData function not found');
     }
 };
 
-console.log('✅ Main.js loaded');
+// ============================================
+// API_BASE ni global qilish
+// ============================================
+window.API_BASE = API_BASE;
+
+console.log('✅ Main.js loaded - API_BASE:', API_BASE);
