@@ -8,7 +8,7 @@
 var API_BASE = (function() {
     // Agar Vercel da bo'lsa
     if (window.location.hostname.includes('vercel.app')) {
-        return 'https://pop-agro-product.vercel.app/api';  // 🔥 TO'LIQ URL
+        return window.location.origin + '/api';
     }
     // Agar localhost da bo'lsa
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -29,8 +29,9 @@ console.log('✅ API_BASE:', API_BASE);
 var API = {
     // ==================== PRODUCTS ====================
     getProducts: function() {
-        console.log('📤 API.getProducts - URL:', API_BASE + '/products');
-        return fetch(API_BASE + '/products')
+        var url = API_BASE + '/products';
+        console.log('📤 API.getProducts - URL:', url);
+        return fetch(url)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
                 if (!r.ok) {
@@ -49,8 +50,9 @@ var API = {
     },
     
     addProduct: function(data) {
-        console.log('📤 API.addProduct - URL:', API_BASE + '/products');
-        return fetch(API_BASE + '/products', {
+        var url = API_BASE + '/products';
+        console.log('📤 API.addProduct - URL:', url);
+        return fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -73,8 +75,9 @@ var API = {
     },
     
     updateProduct: function(id, data) {
-        console.log('📤 API.updateProduct - URL:', API_BASE + '/products/' + id);
-        return fetch(API_BASE + '/products/' + id, {
+        var url = API_BASE + '/products/' + id;
+        console.log('📤 API.updateProduct - URL:', url);
+        return fetch(url, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -97,8 +100,9 @@ var API = {
     },
     
     deleteProduct: function(id) {
-        console.log('🗑️ API.deleteProduct - URL:', API_BASE + '/products/' + id);
-        return fetch(API_BASE + '/products/' + id, {
+        var url = API_BASE + '/products/' + id;
+        console.log('🗑️ API.deleteProduct - URL:', url);
+        return fetch(url, {
             method: 'DELETE'
         })
         .then(function(r) {
@@ -120,8 +124,9 @@ var API = {
     
     // ==================== SALES ====================
     addSale: function(data) {
-        console.log('📤 API.addSale - URL:', API_BASE + '/sales');
-        return fetch(API_BASE + '/sales', {
+        var url = API_BASE + '/sales';
+        console.log('📤 API.addSale - URL:', url);
+        return fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -192,8 +197,9 @@ var API = {
     
     // ==================== SHIFTS ====================
     openShift: function(balance) {
-        console.log('📤 API.openShift - URL:', API_BASE + '/shifts/open');
-        return fetch(API_BASE + '/shifts/open', {
+        var url = API_BASE + '/shifts/open';
+        console.log('📤 API.openShift - URL:', url);
+        return fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ openingBalance: balance || 0 })
@@ -215,8 +221,9 @@ var API = {
     },
     
     closeShift: function(balance) {
-        console.log('📤 API.closeShift - URL:', API_BASE + '/shifts/close');
-        return fetch(API_BASE + '/shifts/close', {
+        var url = API_BASE + '/shifts/close';
+        console.log('📤 API.closeShift - URL:', url);
+        return fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ closingBalance: balance || 0 })
@@ -238,8 +245,9 @@ var API = {
     },
     
     getCurrentShift: function() {
-        console.log('📤 API.getCurrentShift - URL:', API_BASE + '/shifts/current');
-        return fetch(API_BASE + '/shifts/current')
+        var url = API_BASE + '/shifts/current';
+        console.log('📤 API.getCurrentShift - URL:', url);
+        return fetch(url)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
                 if (!r.ok) {
@@ -257,8 +265,9 @@ var API = {
     },
     
     getShiftHistory: function() {
-        console.log('📤 API.getShiftHistory - URL:', API_BASE + '/shifts/history');
-        return fetch(API_BASE + '/shifts/history')
+        var url = API_BASE + '/shifts/history';
+        console.log('📤 API.getShiftHistory - URL:', url);
+        return fetch(url)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
                 if (!r.ok) {
@@ -277,8 +286,9 @@ var API = {
     
     // ==================== DEBTORS ====================
     getDebtors: function() {
-        console.log('📤 API.getDebtors - URL:', API_BASE + '/debtors');
-        return fetch(API_BASE + '/debtors')
+        var url = API_BASE + '/debtors';
+        console.log('📤 API.getDebtors - URL:', url);
+        return fetch(url)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
                 if (!r.ok) {
@@ -297,8 +307,9 @@ var API = {
     },
     
     payDebt: function(id, amount) {
-        console.log('📤 API.payDebt - URL:', API_BASE + '/debtors/' + id + '/pay');
-        return fetch(API_BASE + '/debtors/' + id + '/pay', {
+        var url = API_BASE + '/debtors/' + id + '/pay';
+        console.log('📤 API.payDebt - URL:', url);
+        return fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ amount: amount || 0 })
@@ -367,8 +378,9 @@ var API = {
     },
     
     getInventoryReport: function() {
-        console.log('📤 API.getInventoryReport - URL:', API_BASE + '/reports/inventory');
-        return fetch(API_BASE + '/reports/inventory')
+        var url = API_BASE + '/reports/inventory';
+        console.log('📤 API.getInventoryReport - URL:', url);
+        return fetch(url)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
                 if (!r.ok) {
@@ -409,8 +421,9 @@ var API = {
     },
     
     getAllReports: function() {
-        console.log('📤 API.getAllReports - URL:', API_BASE + '/reports/all');
-        return fetch(API_BASE + '/reports/all')
+        var url = API_BASE + '/reports/all';
+        console.log('📤 API.getAllReports - URL:', url);
+        return fetch(url)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
                 if (!r.ok) {
@@ -429,8 +442,9 @@ var API = {
     
     // ==================== EMPLOYEES ====================
     getEmployees: function() {
-        console.log('📤 API.getEmployees - URL:', API_BASE + '/employees');
-        return fetch(API_BASE + '/employees')
+        var url = API_BASE + '/employees';
+        console.log('📤 API.getEmployees - URL:', url);
+        return fetch(url)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
                 if (!r.ok) {
@@ -449,8 +463,9 @@ var API = {
     },
     
     addEmployee: function(data) {
-        console.log('📤 API.addEmployee - URL:', API_BASE + '/employees');
-        return fetch(API_BASE + '/employees', {
+        var url = API_BASE + '/employees';
+        console.log('📤 API.addEmployee - URL:', url);
+        return fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -473,8 +488,9 @@ var API = {
     },
     
     deleteEmployee: function(id) {
-        console.log('📤 API.deleteEmployee - URL:', API_BASE + '/employees/' + id);
-        return fetch(API_BASE + '/employees/' + id, {
+        var url = API_BASE + '/employees/' + id;
+        console.log('📤 API.deleteEmployee - URL:', url);
+        return fetch(url, {
             method: 'DELETE'
         })
         .then(function(r) {
@@ -496,8 +512,9 @@ var API = {
     
     // ==================== RETURNS (QAYTARISH) ====================
     returnProduct: function(data) {
-        console.log('📤 API.returnProduct - URL:', API_BASE + '/returns');
-        return fetch(API_BASE + '/returns', {
+        var url = API_BASE + '/returns';
+        console.log('📤 API.returnProduct - URL:', url);
+        return fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -542,8 +559,9 @@ var API = {
     },
     
     getAllReturns: function() {
-        console.log('📤 API.getAllReturns - URL:', API_BASE + '/returns/all');
-        return fetch(API_BASE + '/returns/all')
+        var url = API_BASE + '/returns/all';
+        console.log('📤 API.getAllReturns - URL:', url);
+        return fetch(url)
             .then(function(r) {
                 console.log('📥 Response status:', r.status);
                 if (!r.ok) {
