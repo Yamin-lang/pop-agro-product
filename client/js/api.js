@@ -1,5 +1,5 @@
 // ============================================
-// API.JS - SERVER BOG'LANISH (TO'LIQ TUZATILGAN)
+// API.JS - SERVER BOG'LANISH (TUZATILGAN)
 // ============================================
 
 // ============================================
@@ -8,7 +8,7 @@
 var API_BASE = (function() {
     // Agar Vercel da bo'lsa
     if (window.location.hostname.includes('vercel.app')) {
-        return window.location.origin + '/api';
+        return 'https://pop-agro-product.vercel.app/api';
     }
     // Agar localhost da bo'lsa
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -148,6 +148,7 @@ var API = {
         });
     },
     
+    // 🔥 getSales - reports.js da ishlatiladi
     getSales: function(date) {
         var queryDate = date || new Date().toISOString().split('T')[0];
         var url = API_BASE + '/sales/daily?date=' + queryDate;
@@ -274,6 +275,7 @@ var API = {
                 return r.json();
             })
             .then(function(data) {
+                console.log('📥 Shift history:', data);
                 return data;
             })
             .catch(function(err) {
@@ -508,7 +510,7 @@ var API = {
         });
     },
     
-    // ==================== RETURNS (QAYTARISH) ====================
+    // ==================== RETURNS ====================
     returnProduct: function(data) {
         var url = API_BASE + '/returns';
         console.log('📤 API.returnProduct - URL:', url);
