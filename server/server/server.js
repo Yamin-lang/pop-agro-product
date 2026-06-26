@@ -11,18 +11,16 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ============================================
-// 🔥 MIDDLEWARE - CORS TO'G'RILANGAN
+// 🔥 CORS - BARCHA DOMENLARGA RUXSAT
 // ============================================
 app.use(cors({
-    origin: '*',  // 🔥 BARCHA DOMENLARGA RUXSAT
+    origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// Statik fayllar
-app.use(express.static(path.join(__dirname, '../client')));
 
 console.log('✅ Middleware loaded');
 
@@ -39,111 +37,99 @@ const db = new sqlite3.Database(path.join(__dirname, 'database.db'), function(er
 
 db.serialize(function() {
     // Products
-    db.run(`
-        CREATE TABLE IF NOT EXISTS products (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            code TEXT,
-            price REAL DEFAULT 0,
-            cost_price REAL DEFAULT 0,
-            quantity REAL DEFAULT 0,
-            unit TEXT DEFAULT 'dona',
-            image TEXT,
-            sales_count INTEGER DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `, function(err) {
+    db.run(`CREATE TABLE IF NOT EXISTS products (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        code TEXT,
+        price REAL DEFAULT 0,
+        cost_price REAL DEFAULT 0,
+        quantity REAL DEFAULT 0,
+        unit TEXT DEFAULT 'dona',
+        image TEXT,
+        sales_count INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`, function(err) {
         if (err) console.error('Products table error:', err);
         else console.log('✅ Products table ready');
     });
 
     // Sales
-    db.run(`
-        CREATE TABLE IF NOT EXISTS sales (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            product_id INTEGER,
-            quantity REAL DEFAULT 0,
-            price REAL DEFAULT 0,
-            total_price REAL DEFAULT 0,
-            discount REAL DEFAULT 0,
-            payment_type TEXT DEFAULT 'cash',
-            shift_id INTEGER,
-            sale_date DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `, function(err) {
+    db.run(`CREATE TABLE IF NOT EXISTS sales (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER,
+        quantity REAL DEFAULT 0,
+        price REAL DEFAULT 0,
+        total_price REAL DEFAULT 0,
+        discount REAL DEFAULT 0,
+        payment_type TEXT DEFAULT 'cash',
+        shift_id INTEGER,
+        sale_date DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`, function(err) {
         if (err) console.error('Sales table error:', err);
         else console.log('✅ Sales table ready');
     });
 
     // Shifts
-    db.run(`
-        CREATE TABLE IF NOT EXISTS shifts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            opening_balance REAL DEFAULT 0,
-            closing_balance REAL DEFAULT 0,
-            opened_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            closed_at DATETIME,
-            is_active INTEGER DEFAULT 1,
-            total_sales INTEGER DEFAULT 0,
-            total_amount REAL DEFAULT 0,
-            cash_amount REAL DEFAULT 0,
-            terminal_amount REAL DEFAULT 0,
-            credit_amount REAL DEFAULT 0,
-            sale_dates TEXT
-        )
-    `, function(err) {
+    db.run(`CREATE TABLE IF NOT EXISTS shifts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        opening_balance REAL DEFAULT 0,
+        closing_balance REAL DEFAULT 0,
+        opened_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        closed_at DATETIME,
+        is_active INTEGER DEFAULT 1,
+        total_sales INTEGER DEFAULT 0,
+        total_amount REAL DEFAULT 0,
+        cash_amount REAL DEFAULT 0,
+        terminal_amount REAL DEFAULT 0,
+        credit_amount REAL DEFAULT 0,
+        sale_dates TEXT
+    )`, function(err) {
         if (err) console.error('Shifts table error:', err);
         else console.log('✅ Shifts table ready');
     });
 
     // Debtors
-    db.run(`
-        CREATE TABLE IF NOT EXISTS debtors (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            phone TEXT,
-            address TEXT,
-            amount REAL DEFAULT 0,
-            sale_id INTEGER,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            paid_at DATETIME,
-            is_paid INTEGER DEFAULT 0
-        )
-    `, function(err) {
+    db.run(`CREATE TABLE IF NOT EXISTS debtors (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        phone TEXT,
+        address TEXT,
+        amount REAL DEFAULT 0,
+        sale_id INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        paid_at DATETIME,
+        is_paid INTEGER DEFAULT 0
+    )`, function(err) {
         if (err) console.error('Debtors table error:', err);
         else console.log('✅ Debtors table ready');
     });
 
     // Employees
-    db.run(`
-        CREATE TABLE IF NOT EXISTS employees (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT UNIQUE,
-            password TEXT,
-            position TEXT,
-            phone TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `, function(err) {
+    db.run(`CREATE TABLE IF NOT EXISTS employees (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE,
+        password TEXT,
+        position TEXT,
+        phone TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`, function(err) {
         if (err) console.error('Employees table error:', err);
         else console.log('✅ Employees table ready');
     });
 
     // Returns
-    db.run(`
-        CREATE TABLE IF NOT EXISTS returns (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sale_id INTEGER,
-            product_id INTEGER,
-            quantity REAL DEFAULT 0,
-            price REAL DEFAULT 0,
-            total_price REAL DEFAULT 0,
-            reason TEXT,
-            returned_by TEXT,
-            return_date DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `, function(err) {
+    db.run(`CREATE TABLE IF NOT EXISTS returns (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sale_id INTEGER,
+        product_id INTEGER,
+        quantity REAL DEFAULT 0,
+        price REAL DEFAULT 0,
+        total_price REAL DEFAULT 0,
+        reason TEXT,
+        returned_by TEXT,
+        return_date DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`, function(err) {
         if (err) console.error('Returns table error:', err);
         else console.log('✅ Returns table ready');
     });
@@ -151,8 +137,7 @@ db.serialize(function() {
     // Admin user
     db.get('SELECT * FROM employees WHERE email = ?', ['admin@example.com'], function(err, row) {
         if (!row) {
-            db.run(
-                `INSERT INTO employees (name, email, password, position) VALUES (?, ?, ?, ?)`,
+            db.run(`INSERT INTO employees (name, email, password, position) VALUES (?, ?, ?, ?)`,
                 ['Admin', 'admin@example.com', '123456', 'Administrator'],
                 function(err) {
                     if (err) console.error('Admin insert error:', err);
@@ -179,14 +164,7 @@ app.get('/api/products', function(req, res) {
 
 app.post('/api/products', function(req, res) {
     console.log('📤 POST /api/products');
-    var name = req.body.name;
-    var code = req.body.code;
-    var price = req.body.price;
-    var cost_price = req.body.cost_price;
-    var quantity = req.body.quantity;
-    var unit = req.body.unit;
-    var image = req.body.image;
-    var image_data = req.body.image_data;
+    var { name, code, price, cost_price, quantity, unit, image, image_data } = req.body;
     
     if (!name || !price) {
         return res.status(400).json({ success: false, message: 'Nomi va narxi kiritilishi shart' });
@@ -212,13 +190,7 @@ app.post('/api/products', function(req, res) {
 
 app.put('/api/products/:id', function(req, res) {
     var id = req.params.id;
-    var name = req.body.name;
-    var code = req.body.code;
-    var price = req.body.price;
-    var cost_price = req.body.cost_price;
-    var quantity = req.body.quantity;
-    var unit = req.body.unit;
-    var image = req.body.image;
+    var { name, code, price, cost_price, quantity, unit, image } = req.body;
 
     db.run(
         `UPDATE products SET name=?, code=?, price=?, cost_price=?, quantity=?, unit=?, image=? WHERE id=?`,
@@ -254,12 +226,7 @@ app.delete('/api/products/:id', function(req, res) {
 // ============================================
 app.post('/api/sales', function(req, res) {
     console.log('📤 POST /api/sales');
-    var items = req.body.items;
-    var total = req.body.total;
-    var discount = req.body.discount;
-    var payment_type = req.body.payment_type;
-    var shift_id = req.body.shift_id;
-    var debtor = req.body.debtor;
+    var { items, total, discount, payment_type, shift_id, debtor } = req.body;
 
     if (!items || items.length === 0) {
         return res.status(400).json({ success: false, message: 'Savatcha bo\'sh' });
@@ -295,10 +262,7 @@ app.post('/api/sales', function(req, res) {
                 db.run(
                     `INSERT INTO debtors (name, phone, address, amount, sale_id, is_paid) 
                      VALUES (?, ?, ?, ?, ?, 0)`,
-                    [debtor.name, debtor.phone || '', debtor.address || '', total || 0, saleIds[0] || null],
-                    function(err) {
-                        if (err) console.error('Debtor save error:', err);
-                    }
+                    [debtor.name, debtor.phone || '', debtor.address || '', total || 0, saleIds[0] || null]
                 );
             }
 
@@ -364,7 +328,6 @@ app.get('/api/sales/monthly', function(req, res) {
 // ============================================
 // API - SHIFTS
 // ============================================
-
 app.post('/api/shifts/open', function(req, res) {
     console.log('📤 POST /api/shifts/open');
     var openingBalance = req.body.openingBalance;
@@ -442,16 +405,13 @@ app.post('/api/shifts/close', function(req, res) {
                     }
                     
                     db.run('DELETE FROM sales WHERE shift_id = ?', [shift.id], function(err) {
-                        if (err) {
-                            console.error('Clear sales error:', err);
-                        } else {
-                            console.log('✅ Sales cleared for shift:', shift.id);
-                        }
+                        if (err) console.error('Clear sales error:', err);
+                        else console.log('✅ Sales cleared for shift:', shift.id);
                     });
                     
                     res.json({ 
                         success: true, 
-                        message: 'Smena yopildi! Savdo hisobotga saqlandi.',
+                        message: 'Smena yopildi!',
                         data: {
                             shift_id: shift.id,
                             report: report,
@@ -611,9 +571,7 @@ app.get('/api/reports/inventory', function(req, res) {
             console.error('Inventory report error:', err);
             return res.status(500).json({ success: false, message: err.message, data: {} });
         }
-        var totalCost = 0;
-        var totalPrice = 0;
-        var totalQuantity = 0;
+        var totalCost = 0, totalPrice = 0, totalQuantity = 0;
         rows.forEach(function(p) {
             var qty = p.quantity || 0;
             totalCost += qty * (p.cost_price || 0);
@@ -672,7 +630,6 @@ app.get('/api/reports/all', function(req, res) {
     var month = now.getMonth() + 1;
     var monthStr = String(month).padStart(2, '0');
 
-    // Monthly sales
     db.get(`
         SELECT 
             COUNT(*) as total_sales,
@@ -687,7 +644,6 @@ app.get('/api/reports/all', function(req, res) {
             console.error('Monthly report error:', err);
             return res.status(500).json({ success: false, message: err.message, data: {} });
         }
-        // Inventory
         db.all('SELECT name, price, cost_price, quantity FROM products', function(err, rows) {
             if (err) {
                 console.error('Inventory error:', err);
@@ -700,10 +656,8 @@ app.get('/api/reports/all', function(req, res) {
                 totalPrice += qty * (p.price || 0);
                 totalQuantity += qty;
             });
-            // Monthly profit
             db.all(`
-                SELECT 
-                    (s.price - p.cost_price) * s.quantity as profit
+                SELECT (s.price - p.cost_price) * s.quantity as profit
                 FROM sales s
                 LEFT JOIN products p ON s.product_id = p.id
                 WHERE strftime('%Y', s.sale_date) = ? AND strftime('%m', s.sale_date) = ?
@@ -747,11 +701,7 @@ app.get('/api/employees', function(req, res) {
 
 app.post('/api/employees', function(req, res) {
     console.log('📤 POST /api/employees');
-    var name = req.body.name;
-    var email = req.body.email;
-    var password = req.body.password;
-    var position = req.body.position;
-    var phone = req.body.phone;
+    var { name, email, password, position, phone } = req.body;
     
     if (!name || !email) {
         return res.status(400).json({ success: false, message: 'Ism va email kiritilishi shart' });
@@ -789,13 +739,7 @@ app.delete('/api/employees/:id', function(req, res) {
 // ============================================
 app.post('/api/returns', function(req, res) {
     console.log('📤 POST /api/returns');
-    var sale_id = req.body.sale_id;
-    var product_id = req.body.product_id;
-    var quantity = req.body.quantity;
-    var price = req.body.price;
-    var total_price = req.body.total_price;
-    var reason = req.body.reason;
-    var returned_by = req.body.returned_by;
+    var { sale_id, product_id, quantity, price, total_price, reason, returned_by } = req.body;
     
     if (!product_id || !quantity) {
         return res.status(400).json({ success: false, message: 'Mahsulot ID va miqdor kiritilishi shart' });
@@ -901,6 +845,8 @@ app.get('/api/returns/all', function(req, res) {
 // ============================================
 // FRONTEND
 // ============================================
+app.use(express.static(path.join(__dirname, '../client')));
+
 app.get('*', function(req, res) {
     res.sendFile(path.join(__dirname, '../client/index.html'));
 });
@@ -914,8 +860,6 @@ app.listen(PORT, function() {
     console.log('='.repeat(50));
     console.log('✅ Server: http://localhost:' + PORT);
     console.log('📊 API: http://localhost:' + PORT + '/api/products');
-    console.log('🔄 Returns: http://localhost:' + PORT + '/api/returns');
-    console.log('📋 Shifts: http://localhost:' + PORT + '/api/shifts/history');
     console.log('🌐 Frontend: http://localhost:' + PORT);
     console.log('='.repeat(50));
 });
@@ -927,3 +871,5 @@ process.on('uncaughtException', function(err) {
 process.on('unhandledRejection', function(err) {
     console.error('❌ Unhandled Rejection:', err);
 });
+
+module.exports = app;
