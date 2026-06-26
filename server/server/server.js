@@ -1,5 +1,5 @@
 // ============================================
-// POP-AGRO-PRODUCT SERVER (TO'LIQ)
+// POP-AGRO-PRODUCT SERVER (TO'LIQ TUZATILGAN)
 // ============================================
 
 const express = require('express');
@@ -8,12 +8,16 @@ const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 // ============================================
-// MIDDLEWARE
+// 🔥 MIDDLEWARE - CORS TO'G'RILANGAN
 // ============================================
-app.use(cors());
+app.use(cors({
+    origin: '*',  // 🔥 BARCHA DOMENLARGA RUXSAT
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -71,7 +75,7 @@ db.serialize(function() {
         else console.log('✅ Sales table ready');
     });
 
-    // Shifts - yangi ustunlar bilan
+    // Shifts
     db.run(`
         CREATE TABLE IF NOT EXISTS shifts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -126,7 +130,7 @@ db.serialize(function() {
         else console.log('✅ Employees table ready');
     });
 
-    // RETURNS (Qaytarish)
+    // Returns
     db.run(`
         CREATE TABLE IF NOT EXISTS returns (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -137,33 +141,25 @@ db.serialize(function() {
             total_price REAL DEFAULT 0,
             reason TEXT,
             returned_by TEXT,
-            return_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (sale_id) REFERENCES sales(id),
-            FOREIGN KEY (product_id) REFERENCES products(id)
+            return_date DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `, function(err) {
         if (err) console.error('Returns table error:', err);
         else console.log('✅ Returns table ready');
     });
 
-    // Eski shifts jadvaliga yangi ustunlar qo'shish (agar mavjud bo'lsa)
-    db.run(`ALTER TABLE shifts ADD COLUMN total_sales INTEGER DEFAULT 0`, function(err) {
-        if (err && !err.message.includes('duplicate column')) console.log('⚠️ total_sales already exists or error');
-    });
-    db.run(`ALTER TABLE shifts ADD COLUMN total_amount REAL DEFAULT 0`, function(err) {
-        if (err && !err.message.includes('duplicate column')) console.log('⚠️ total_amount already exists or error');
-    });
-    db.run(`ALTER TABLE shifts ADD COLUMN cash_amount REAL DEFAULT 0`, function(err) {
-        if (err && !err.message.includes('duplicate column')) console.log('⚠️ cash_amount already exists or error');
-    });
-    db.run(`ALTER TABLE shifts ADD COLUMN terminal_amount REAL DEFAULT 0`, function(err) {
-        if (err && !err.message.includes('duplicate column')) console.log('⚠️ terminal_amount already exists or error');
-    });
-    db.run(`ALTER TABLE shifts ADD COLUMN credit_amount REAL DEFAULT 0`, function(err) {
-        if (err && !err.message.includes('duplicate column')) console.log('⚠️ credit_amount already exists or error');
-    });
-    db.run(`ALTER TABLE shifts ADD COLUMN sale_dates TEXT`, function(err) {
-        if (err && !err.message.includes('duplicate column')) console.log('⚠️ sale_dates already exists or error');
+    // Admin user
+    db.get('SELECT * FROM employees WHERE email = ?', ['admin@example.com'], function(err, row) {
+        if (!row) {
+            db.run(
+                `INSERT INTO employees (name, email, password, position) VALUES (?, ?, ?, ?)`,
+                ['Admin', 'admin@example.com', '123456', 'Administrator'],
+                function(err) {
+                    if (err) console.error('Admin insert error:', err);
+                    else console.log('✅ Admin user created');
+                }
+            );
+        }
     });
 });
 
@@ -311,7 +307,6 @@ app.post('/api/sales', function(req, res) {
     });
 });
 
-// 🔥 SALES DAILY - SHIFT_ID FILTER QO'SHILDI
 app.get('/api/sales/daily', function(req, res) {
     var date = req.query.date;
     var shiftId = req.query.shift_id;
@@ -342,7 +337,6 @@ app.get('/api/sales/daily', function(req, res) {
     });
 });
 
-// 🔥 SALES MONTHLY - BARCHA SAVDOLAR (yopilgan + ochiq)
 app.get('/api/sales/monthly', function(req, res) {
     var year = req.query.year;
     var month = req.query.month;
@@ -368,7 +362,7 @@ app.get('/api/sales/monthly', function(req, res) {
 });
 
 // ============================================
-// 🔥 API - SHIFTS (TO'LIQ TUZATILGAN)
+// API - SHIFTS
 // ============================================
 
 app.post('/api/shifts/open', function(req, res) {
@@ -390,12 +384,10 @@ app.post('/api/shifts/open', function(req, res) {
     );
 });
 
-// 🔥 Smena yopish - savdolarni hisobotga saqlash va tozalash
 app.post('/api/shifts/close', function(req, res) {
     console.log('📤 POST /api/shifts/close');
     var closingBalance = req.body.closingBalance;
     
-    // Joriy smenani olish
     db.get('SELECT * FROM shifts WHERE is_active = 1 ORDER BY id DESC LIMIT 1', function(err, shift) {
         if (err) {
             console.error('Get shift error:', err);
@@ -405,7 +397,6 @@ app.post('/api/shifts/close', function(req, res) {
             return res.status(404).json({ success: false, message: 'Aktiv smena topilmadi' });
         }
         
-        // 🔥 SAVDOLARNI HISOBI (faqat shu smenaga tegishli)
         db.get(`
             SELECT 
                 COUNT(*) as total_sales,
@@ -422,7 +413,6 @@ app.post('/api/shifts/close', function(req, res) {
                 return res.status(500).json({ success: false, message: err.message });
             }
             
-            // 🔥 SMENANI YOPISH VA HISOBOTNI SAQLASH
             db.run(
                 `UPDATE shifts SET 
                     closing_balance = ?, 
@@ -451,7 +441,6 @@ app.post('/api/shifts/close', function(req, res) {
                         return res.status(500).json({ success: false, message: err.message });
                     }
                     
-                    // 🔥🔥🔥 SAVDO JADVALINI TOZALASH (kunlik savdo 0 bo'ladi)
                     db.run('DELETE FROM sales WHERE shift_id = ?', [shift.id], function(err) {
                         if (err) {
                             console.error('Clear sales error:', err);
@@ -486,7 +475,6 @@ app.get('/api/shifts/current', function(req, res) {
     });
 });
 
-// 🔥 Smena tarixi - yopilgan smenalar hisobotini olish
 app.get('/api/shifts/history', function(req, res) {
     console.log('📤 GET /api/shifts/history');
     db.all(`
@@ -589,6 +577,160 @@ app.get('/api/reports/daily', function(req, res) {
     });
 });
 
+app.get('/api/reports/monthly', function(req, res) {
+    var year = req.query.year;
+    var month = req.query.month;
+    var now = new Date();
+    var y = year || now.getFullYear();
+    var m = month || (now.getMonth() + 1);
+    var monthStr = String(m).padStart(2, '0');
+    console.log('📤 GET /api/reports/monthly?year=' + y + '&month=' + m);
+
+    db.get(`
+        SELECT 
+            COUNT(*) as total_sales,
+            COALESCE(SUM(total_price), 0) as total_amount,
+            COALESCE(SUM(CASE WHEN payment_type = 'cash' THEN total_price ELSE 0 END), 0) as cash_amount,
+            COALESCE(SUM(CASE WHEN payment_type = 'terminal' THEN total_price ELSE 0 END), 0) as terminal_amount,
+            COALESCE(SUM(CASE WHEN payment_type = 'credit' THEN total_price ELSE 0 END), 0) as credit_amount
+        FROM sales
+        WHERE strftime('%Y', sale_date) = ? AND strftime('%m', sale_date) = ?
+    `, [String(y), monthStr], function(err, row) {
+        if (err) {
+            console.error('Monthly report error:', err);
+            return res.status(500).json({ success: false, message: err.message, data: {} });
+        }
+        res.json({ success: true, data: row || { total_sales: 0, total_amount: 0 } });
+    });
+});
+
+app.get('/api/reports/inventory', function(req, res) {
+    console.log('📤 GET /api/reports/inventory');
+    db.all('SELECT name, price, cost_price, quantity FROM products', function(err, rows) {
+        if (err) {
+            console.error('Inventory report error:', err);
+            return res.status(500).json({ success: false, message: err.message, data: {} });
+        }
+        var totalCost = 0;
+        var totalPrice = 0;
+        var totalQuantity = 0;
+        rows.forEach(function(p) {
+            var qty = p.quantity || 0;
+            totalCost += qty * (p.cost_price || 0);
+            totalPrice += qty * (p.price || 0);
+            totalQuantity += qty;
+        });
+        res.json({ success: true, data: {
+            total_quantity: totalQuantity,
+            total_cost: totalCost,
+            total_price: totalPrice,
+            potential_profit: totalPrice - totalCost,
+            products: rows
+        }});
+    });
+});
+
+app.get('/api/reports/monthly-profit', function(req, res) {
+    var year = req.query.year;
+    var month = req.query.month;
+    var now = new Date();
+    var y = year || now.getFullYear();
+    var m = month || (now.getMonth() + 1);
+    var monthStr = String(m).padStart(2, '0');
+    console.log('📤 GET /api/reports/monthly-profit?year=' + y + '&month=' + m);
+
+    db.all(`
+        SELECT 
+            s.*,
+            p.cost_price,
+            p.name as product_name,
+            (s.price - p.cost_price) * s.quantity as profit
+        FROM sales s
+        LEFT JOIN products p ON s.product_id = p.id
+        WHERE strftime('%Y', s.sale_date) = ? AND strftime('%m', s.sale_date) = ?
+    `, [String(y), monthStr], function(err, rows) {
+        if (err) {
+            console.error('Monthly profit error:', err);
+            return res.status(500).json({ success: false, message: err.message, data: {} });
+        }
+        var totalProfit = 0;
+        rows.forEach(function(r) {
+            totalProfit += r.profit || 0;
+        });
+        res.json({ success: true, data: {
+            total_profit: totalProfit,
+            total_sales: rows.length,
+            details: rows
+        }});
+    });
+});
+
+app.get('/api/reports/all', function(req, res) {
+    console.log('📤 GET /api/reports/all');
+    var now = new Date();
+    var year = now.getFullYear();
+    var month = now.getMonth() + 1;
+    var monthStr = String(month).padStart(2, '0');
+
+    // Monthly sales
+    db.get(`
+        SELECT 
+            COUNT(*) as total_sales,
+            COALESCE(SUM(total_price), 0) as total_amount,
+            COALESCE(SUM(CASE WHEN payment_type = 'cash' THEN total_price ELSE 0 END), 0) as cash_amount,
+            COALESCE(SUM(CASE WHEN payment_type = 'terminal' THEN total_price ELSE 0 END), 0) as terminal_amount,
+            COALESCE(SUM(CASE WHEN payment_type = 'credit' THEN total_price ELSE 0 END), 0) as credit_amount
+        FROM sales
+        WHERE strftime('%Y', sale_date) = ? AND strftime('%m', sale_date) = ?
+    `, [String(year), monthStr], function(err, monthly) {
+        if (err) {
+            console.error('Monthly report error:', err);
+            return res.status(500).json({ success: false, message: err.message, data: {} });
+        }
+        // Inventory
+        db.all('SELECT name, price, cost_price, quantity FROM products', function(err, rows) {
+            if (err) {
+                console.error('Inventory error:', err);
+                return res.status(500).json({ success: false, message: err.message, data: {} });
+            }
+            var totalCost = 0, totalPrice = 0, totalQuantity = 0;
+            rows.forEach(function(p) {
+                var qty = p.quantity || 0;
+                totalCost += qty * (p.cost_price || 0);
+                totalPrice += qty * (p.price || 0);
+                totalQuantity += qty;
+            });
+            // Monthly profit
+            db.all(`
+                SELECT 
+                    (s.price - p.cost_price) * s.quantity as profit
+                FROM sales s
+                LEFT JOIN products p ON s.product_id = p.id
+                WHERE strftime('%Y', s.sale_date) = ? AND strftime('%m', s.sale_date) = ?
+            `, [String(year), monthStr], function(err, profitRows) {
+                if (err) {
+                    console.error('Profit error:', err);
+                    return res.status(500).json({ success: false, message: err.message, data: {} });
+                }
+                var totalProfit = 0;
+                profitRows.forEach(function(r) {
+                    totalProfit += r.profit || 0;
+                });
+                res.json({ success: true, data: {
+                    monthly: monthly || { total_sales: 0, total_amount: 0 },
+                    inventory: {
+                        total_quantity: totalQuantity,
+                        total_cost: totalCost,
+                        total_price: totalPrice,
+                        potential_profit: totalPrice - totalCost
+                    },
+                    profit: { total_profit: totalProfit, total_sales: profitRows.length }
+                }});
+            });
+        });
+    });
+});
+
 // ============================================
 // API - EMPLOYEES
 // ============================================
@@ -643,10 +785,8 @@ app.delete('/api/employees/:id', function(req, res) {
 });
 
 // ============================================
-// 🔥 API - RETURNS (QAYTARISH)
+// API - RETURNS
 // ============================================
-
-// POST /api/returns - Mahsulotni qaytarib olish (omborga qaytaradi)
 app.post('/api/returns', function(req, res) {
     console.log('📤 POST /api/returns');
     var sale_id = req.body.sale_id;
@@ -658,13 +798,9 @@ app.post('/api/returns', function(req, res) {
     var returned_by = req.body.returned_by;
     
     if (!product_id || !quantity) {
-        return res.status(400).json({ 
-            success: false, 
-            message: 'Mahsulot ID va miqdor kiritilishi shart' 
-        });
+        return res.status(400).json({ success: false, message: 'Mahsulot ID va miqdor kiritilishi shart' });
     }
     
-    // Mahsulotni tekshirish
     db.get('SELECT * FROM products WHERE id = ?', [product_id], function(err, product) {
         if (err) {
             console.error('Product check error:', err);
@@ -674,7 +810,6 @@ app.post('/api/returns', function(req, res) {
             return res.status(404).json({ success: false, message: 'Mahsulot topilmadi' });
         }
         
-        // MAHSULOTNI OMBORGA QAYTARISH
         var newQuantity = (product.quantity || 0) + parseFloat(quantity);
         
         db.run(
@@ -694,7 +829,6 @@ app.post('/api/returns', function(req, res) {
                     console.error('Return insert error:', err);
                     return res.status(500).json({ success: false, message: err.message });
                 }
-                
                 db.run(
                     'UPDATE products SET quantity = ? WHERE id = ?',
                     [newQuantity, product_id],
@@ -703,9 +837,6 @@ app.post('/api/returns', function(req, res) {
                             console.error('Update quantity error:', err);
                             return res.status(500).json({ success: false, message: err.message });
                         }
-                        
-                        console.log('✅ Mahsulot qaytarildi! Yangi miqdor:', newQuantity);
-                        
                         db.get('SELECT * FROM returns WHERE id = ?', [this.lastID], function(err, row) {
                             res.json({ 
                                 success: true, 
@@ -728,7 +859,6 @@ app.post('/api/returns', function(req, res) {
     });
 });
 
-// GET /api/returns - Qaytarishlar ro'yxati (kunlik)
 app.get('/api/returns', function(req, res) {
     var date = req.query.date;
     var queryDate = date || new Date().toISOString().split('T')[0];
@@ -750,7 +880,6 @@ app.get('/api/returns', function(req, res) {
     });
 });
 
-// GET /api/returns/all - Barcha qaytarishlar
 app.get('/api/returns/all', function(req, res) {
     console.log('📤 GET /api/returns/all');
     db.all(`
@@ -791,7 +920,6 @@ app.listen(PORT, function() {
     console.log('='.repeat(50));
 });
 
-// Xatoliklarni ushlash
 process.on('uncaughtException', function(err) {
     console.error('❌ Uncaught Exception:', err.message);
 });
