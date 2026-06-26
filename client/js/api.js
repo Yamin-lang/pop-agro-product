@@ -1,5 +1,5 @@
 // ============================================
-// API.JS - SERVER BOG'LANISH (TUZATILGAN)
+// API.JS - SERVER BOG'LANISH (TO'LIQ TUZATILGAN)
 // ============================================
 
 // ============================================
@@ -148,7 +148,6 @@ var API = {
         });
     },
     
-    // 🔥 getSales - reports.js da ishlatiladi
     getSales: function(date) {
         var queryDate = date || new Date().toISOString().split('T')[0];
         var url = API_BASE + '/sales/daily?date=' + queryDate;
@@ -510,7 +509,7 @@ var API = {
         });
     },
     
-    // ==================== RETURNS ====================
+    // ==================== RETURNS (QAYTARISH) ====================
     returnProduct: function(data) {
         var url = API_BASE + '/returns';
         console.log('📤 API.returnProduct - URL:', url);
